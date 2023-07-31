@@ -1,7 +1,7 @@
 # parallax
 Pure JavaScript scroller game
-
-## Pure JavaScript scroller game with Firebase realtimedatabase connection best scores.
+Scroller game with Firebase realtimedatabase connection for best scores.
+Game using parallax-fx
 
 ### Live demo :
 https://parallax-fx.web.app/
