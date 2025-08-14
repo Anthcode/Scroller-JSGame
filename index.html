@@ -2,19 +2,246 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <title>CanvaS JS</title>
+    <title>CanvaS JS - Enhanced Parallax</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Dodatkowe style dla kontrolek */
+        .weather-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .weather-controls h3 {
+            margin: 0 0 15px 0;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .weather-btn {
+            margin: 5px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .weather-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .rain-btn {
+            background: linear-gradient(45deg, #4A90E2, #357ABD);
+            color: white;
+        }
+
+        .snow-btn {
+            background: linear-gradient(45deg, #E8F4F8, #B8D4DA);
+            color: #333;
+        }
+
+        .leaves-btn {
+            background: linear-gradient(45deg, #D2691E, #A0522D);
+            color: white;
+        }
+
+        .sun-btn {
+            background: linear-gradient(45deg, #87CEEB, #4682B4);
+            color: white;
+        }
+
+        .control-group {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .control-group label {
+            color: #ccc;
+            font-size: 14px;
+            margin-right: 10px;
+            min-width: 100px;
+        }
+
+        .control-group input[type="range"] {
+            flex: 1;
+            margin: 0 10px;
+            accent-color: #00ffff;
+        }
+
+        .value-display {
+            color: #00ffff;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .stats-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            color: #00ffff;
+            font-family: Arial, sans-serif;
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .stats-panel h4 {
+            margin: 0 0 10px 0;
+            color: #fff;
+        }
+
+        .stat-item {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .keyboard-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            color: #ccc;
+            font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
 </head>
 <body>
     <center>
-        <h1>Parallax FX</h1></center>
+        <h1>Parallax FX - Enhanced</h1>
+    </center>
+    
     <canvas id="canvas1"></canvas>
     
+    <!-- Panel kontrolek pogody -->
+    <div class="weather-controls">
+        <h3>🌦️ Kontrola Pogody</h3>
+        
+        <div>
+            <button class="weather-btn rain-btn" onclick="changeWeather('rain')">
+                🌧️ Deszcz
+            </button>
+            <button class="weather-btn snow-btn" onclick="changeWeather('snow')">
+                ❄️ Śnieg
+            </button>
+            <button class="weather-btn leaves-btn" onclick="changeWeather('leaves')">
+                🍃 Liście
+            </button>
+            <button class="weather-btn sun-btn" onclick="changeWeather('none')">
+                ☀️ Słońce
+            </button>
+        </div>
+        
+        <div class="control-group">
+            <label>Intensywność:</label>
+            <input type="range" id="particleSlider" min="0" max="150" value="80" 
+                   onchange="setParticleCount(this.value); updateSliderValue('particles', this.value)">
+            <span class="value-display" id="particlesValue">80</span>
+        </div>
+        
+        <div class="control-group">
+            <label>Siła wiatru:</label>
+            <input type="range" id="windSlider" min="0" max="3" step="0.1" value="1" 
+                   onchange="windForce = parseFloat(this.value); updateSliderValue('wind', this.value)">
+            <span class="value-display" id="windValue">1.0</span>
+        </div>
+        
+        <div class="control-group">
+            <label>Prędkość gry:</label>
+            <input type="range" id="speedSlider" min="0.5" max="5" step="0.1" value="2" 
+                   onchange="gamespeed = parseFloat(this.value); updateSliderValue('speed', this.value)">
+            <span class="value-display" id="speedValue">2.0</span>
+        </div>
+    </div>
+    
+    <!-- Panel statystyk -->
+    <div class="stats-panel">
+        <h4>📊 Statystyki</h4>
+        <div class="stat-item">Cząsteczki: <span id="particleCount">0</span></div>
+        <div class="stat-item">Pogoda: <span id="currentWeather">Słońce</span></div>
+        <div class="stat-item">FPS: <span id="fpsCounter">60</span></div>
+    </div>
+    
+    <!-- Informacje o klawiszach -->
+    <div class="keyboard-info">
+        <strong>⌨️ Klawisze:</strong> 1-Deszcz, 2-Śnieg, 3-Liście, 0-Słońce
+    </div>
 
-    <script src="script.js"></script>   
+    <script src="script.js"></script>
+    
+    <script>
+        // Funkcje pomocnicze dla kontrolek
+        function updateSliderValue(type, value) {
+            const displays = {
+                'particles': 'particlesValue',
+                'wind': 'windValue', 
+                'speed': 'speedValue'
+            };
+            
+            if (displays[type]) {
+                document.getElementById(displays[type]).textContent = 
+                    type === 'particles' ? value : parseFloat(value).toFixed(1);
+            }
+        }
+        
+        // Aktualizacja statystyk
+        function updateStats() {
+            const weatherNames = {
+                'rain': 'Deszcz',
+                'snow': 'Śnieg', 
+                'leaves': 'Liście',
+                'none': 'Słońce'
+            };
+            
+            if (typeof particles !== 'undefined') {
+                document.getElementById('particleCount').textContent = particles.length;
+            }
+            
+            if (typeof weatherMode !== 'undefined') {
+                document.getElementById('currentWeather').textContent = weatherNames[weatherMode] || 'Nieznana';
+            }
+        }
+        
+        // Aktualizuj statystyki co sekundę
+        setInterval(updateStats, 1000);
+        
+        // Prosta animacja FPS counter
+        let fpsCounter = 0;
+        let lastFpsTime = Date.now();
+        
+        function updateFPS() {
+            fpsCounter++;
+            const now = Date.now();
+            if (now - lastFpsTime >= 1000) {
+                document.getElementById('fpsCounter').textContent = fpsCounter;
+                fpsCounter = 0;
+                lastFpsTime = now;
+            }
+            requestAnimationFrame(updateFPS);
+        }
+        updateFPS();
+    </script>
 </body>
-
 </html>
