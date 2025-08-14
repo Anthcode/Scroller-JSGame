@@ -130,7 +130,7 @@
 </head>
 <body>
     <center>
-        <h1>Parallax FX - Enhanced</h1>
+        <h1>Parallax FX</h1>
     </center>
     
     <canvas id="canvas1"></canvas>
@@ -209,10 +209,10 @@
         // Aktualizacja statystyk
         function updateStats() {
             const weatherNames = {
-                'rain': 'Deszcz',
-                'snow': 'Śnieg', 
-                'leaves': 'Liście',
-                'none': 'Słońce'
+                'rain': 'Deszcz 🌧️',
+                'snow': 'Śnieg ❄️', 
+                'leaves': 'Liście 🍃',
+                'none': 'Słońce ☀️'
             };
             
             if (typeof particles !== 'undefined') {
@@ -242,6 +242,14 @@
             requestAnimationFrame(updateFPS);
         }
         updateFPS();
+        
+        // Powiadomienie o załadowaniu
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                console.log("🎮 Enhanced Parallax załadowany!");
+                console.log("🌦️ Kliknij przyciski pogody lub użyj klawiszy 1,2,3,0");
+            }, 1500);
+        });
     </script>
 </body>
 </html>
