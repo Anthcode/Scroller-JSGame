@@ -170,9 +170,16 @@
         
         <div class="control-group">
             <label>Prędkość gry:</label>
-            <input type="range" id="speedSlider" min="0.5" max="5" step="0.1" value="2" 
+            <input type="range" id="speedSlider" min="0.5" max="5" step="0.1" value="2"
                    onchange="gamespeed = parseFloat(this.value); updateSliderValue('speed', this.value)">
             <span class="value-display" id="speedValue">2.0</span>
+        </div>
+
+        <div class="control-group">
+            <label>Szybkość dnia:</label>
+            <input type="range" id="daySpeedSlider" min="0" max="5" step="0.1" value="1"
+                   onchange="daySpeed = parseFloat(this.value) / (60 * 60); updateSliderValue('dayspeed', this.value)">
+            <span class="value-display" id="dayspeedValue">1.0</span>
         </div>
     </div>
     
@@ -182,11 +189,12 @@
         <div class="stat-item">Cząsteczki: <span id="particleCount">0</span></div>
         <div class="stat-item">Pogoda: <span id="currentWeather">Słońce</span></div>
         <div class="stat-item">FPS: <span id="fpsCounter">60</span></div>
+        <div class="stat-item">Pora dnia: <span id="timeOfDay">Noc 🌙</span></div>
     </div>
     
     <!-- Informacje o klawiszach -->
     <div class="keyboard-info">
-        <strong>⌨️ Klawisze:</strong> 1-Deszcz, 2-Śnieg, 3-Liście, 0-Słońce
+        <strong>⌨️ Klawisze:</strong> 1-Deszcz, 2-Śnieg, 3-Liście, 0-Słońce, T-Pauza cyklu
     </div>
 
     <script src="script.js"></script>
@@ -196,8 +204,9 @@
         function updateSliderValue(type, value) {
             const displays = {
                 'particles': 'particlesValue',
-                'wind': 'windValue', 
-                'speed': 'speedValue'
+                'wind': 'windValue',
+                'speed': 'speedValue',
+                'dayspeed': 'dayspeedValue'
             };
             
             if (displays[type]) {
@@ -221,6 +230,16 @@
             
             if (typeof weatherMode !== 'undefined') {
                 document.getElementById('currentWeather').textContent = weatherNames[weatherMode] || 'Nieznana';
+            }
+
+            if (typeof dayTime !== 'undefined') {
+                const phases = [
+                    [0.0, 0.15, 'Noc 🌙'], [0.15, 0.30, 'Świt 🌅'],
+                    [0.30, 0.70, 'Dzień ☀️'], [0.70, 0.85, 'Zmierzch 🌇'],
+                    [0.85, 1.0,  'Noc 🌙']
+                ];
+                const phase = phases.find(p => dayTime >= p[0] && dayTime < p[1]);
+                document.getElementById('timeOfDay').textContent = phase ? phase[2] : 'Noc 🌙';
             }
         }
         

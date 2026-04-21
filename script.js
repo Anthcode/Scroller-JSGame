@@ -9,6 +9,30 @@ let gamespeed = 2;
 let x = 0;
 let x2 = canvas.width;
 
+// DAY/NIGHT CYCLE
+let dayTime = 0;
+let daySpeed = 1 / (60 * 60);
+
+const STAR_COUNT = 65;
+const stars = Array.from({ length: STAR_COUNT }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * (canvas.height * 0.65),
+    r: Math.random() * 1.2 + 0.4,
+    twinkle: Math.random() * Math.PI * 2
+}));
+
+const DAY_PHASES = [
+    { t: 0.000, r: 10,  g: 10,  b: 60,  a: 0.72 },
+    { t: 0.125, r: 20,  g: 15,  b: 70,  a: 0.65 },
+    { t: 0.250, r: 210, g: 100, b: 60,  a: 0.35 },
+    { t: 0.375, r: 255, g: 200, b: 120, a: 0.10 },
+    { t: 0.500, r: 135, g: 190, b: 255, a: 0.05 },
+    { t: 0.625, r: 255, g: 180, b: 90,  a: 0.12 },
+    { t: 0.750, r: 220, g: 80,  b: 40,  a: 0.40 },
+    { t: 0.875, r: 40,  g: 20,  b: 80,  a: 0.60 },
+    { t: 1.000, r: 10,  g: 10,  b: 60,  a: 0.72 },
+];
+
 const back1 = new Image();
 back1.src = 'images/_01_ground.png';
 const back2 = new Image();
@@ -61,6 +85,85 @@ const layer4 = new Layers(back4, 0.46);
 const layer5 = new Layers(back5, 0.3);
 const layer6 = new Layers(back6, 0.2);
 const layer11 = new Layers(back11, 0);
+
+function getDayColor(t) {
+    let lo = DAY_PHASES[0], hi = DAY_PHASES[DAY_PHASES.length - 1];
+    for (let i = 0; i < DAY_PHASES.length - 1; i++) {
+        if (t >= DAY_PHASES[i].t && t <= DAY_PHASES[i + 1].t) {
+            lo = DAY_PHASES[i]; hi = DAY_PHASES[i + 1]; break;
+        }
+    }
+    const f = (t - lo.t) / (hi.t - lo.t || 1);
+    return {
+        r: Math.round(lo.r + (hi.r - lo.r) * f),
+        g: Math.round(lo.g + (hi.g - lo.g) * f),
+        b: Math.round(lo.b + (hi.b - lo.b) * f),
+        a: lo.a + (hi.a - lo.a) * f
+    };
+}
+
+function drawDayNightOverlay() {
+    const c = getDayColor(dayTime);
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0,   `rgba(${c.r},${c.g},${c.b},${c.a})`);
+    grad.addColorStop(0.6, `rgba(${c.r},${c.g},${c.b},${c.a * 0.6})`);
+    grad.addColorStop(1.0, `rgba(${c.r},${c.g},${c.b},0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawStars() {
+    let starOpacity = 0;
+    if (dayTime <= 0.20)      starOpacity = 1 - dayTime / 0.20;
+    else if (dayTime >= 0.80) starOpacity = (dayTime - 0.80) / 0.20;
+    if (starOpacity <= 0) return;
+    const now = Date.now() * 0.001;
+    ctx.save();
+    for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        const alpha = starOpacity * (0.85 + 0.15 * Math.sin(s.twinkle + now));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,240,${alpha})`;
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawSunMoon() {
+    const isSun = dayTime >= 0.25 && dayTime <= 0.75;
+    let arcT;
+    if (isSun) {
+        arcT = (dayTime - 0.25) / 0.50;
+    } else {
+        arcT = dayTime >= 0.75 ? (dayTime - 0.75) / 0.50 : (dayTime + 0.25) / 0.50;
+    }
+    const discX = arcT * canvas.width;
+    const discY = 300 - 250 * Math.sin(arcT * Math.PI);
+    if (discY >= 300) return;
+    const fade = Math.min(1, Math.sin(arcT * Math.PI) * 4);
+    ctx.save();
+    ctx.globalAlpha = fade;
+    if (isSun) {
+        const g = ctx.createRadialGradient(discX, discY, 0, discX, discY, 30);
+        g.addColorStop(0,   'rgba(255,255,200,1.0)');
+        g.addColorStop(0.4, 'rgba(255,220,50,0.95)');
+        g.addColorStop(0.7, 'rgba(255,160,20,0.5)');
+        g.addColorStop(1.0, 'rgba(255,100,0,0)');
+        ctx.beginPath(); ctx.arc(discX, discY, 30, 0, Math.PI * 2);
+        ctx.fillStyle = g; ctx.fill();
+    } else {
+        const g = ctx.createRadialGradient(discX, discY, 0, discX, discY, 18);
+        g.addColorStop(0,   'rgba(240,240,255,1.0)');
+        g.addColorStop(0.6, 'rgba(200,200,240,0.9)');
+        g.addColorStop(1.0, 'rgba(150,150,200,0)');
+        ctx.beginPath(); ctx.arc(discX, discY, 18, 0, Math.PI * 2);
+        ctx.fillStyle = g; ctx.fill();
+        ctx.beginPath(); ctx.arc(discX + 5, discY - 4, 18, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(80,80,120,0.18)'; ctx.fill();
+    }
+    ctx.restore();
+}
 
 // ==== NOWY SYSTEM CZĄSTECZEK ====
 let particles = [];
@@ -225,6 +328,11 @@ function anime() {
   layer11.update();
   layer11.draw();
 
+  dayTime = (dayTime + daySpeed * gamespeed) % 1;
+  drawDayNightOverlay();
+  drawStars();
+  drawSunMoon();
+
   layer6.update();
   layer6.draw();
 
@@ -263,6 +371,10 @@ document.addEventListener('keydown', (e) => {
             break;
         case '0':
             changeWeather('none');
+            break;
+        case 't':
+        case 'T':
+            daySpeed = daySpeed > 0 ? 0 : 1 / (60 * 60);
             break;
     }
 });
