@@ -157,6 +157,20 @@
         .ui-toggle-btn:hover {
             transform: scale(1.1);
         }
+
+        @media (hover: none) and (pointer: coarse) {
+            /* Podpowiedź klawiszy jest bezużyteczna na urządzeniu dotykowym -
+               sterowanie to przytrzymaj-i-przeciągnij na samym canvasie. */
+            .keyboard-info {
+                display: none;
+            }
+        }
+
+        #canvas1 {
+            /* Zapobiega przewijaniu/odświeżaniu strony gestem podczas przeciągania
+               palcem po canvasie - inaczej przeglądarka próbuje scrollować stronę. */
+            touch-action: none;
+        }
     </style>
 </head>
 <body>
@@ -238,6 +252,57 @@
     <script src="script.js"></script>
     
     <script>
+        // Niewidoczny joystick: dotknięcie i przytrzymanie gdziekolwiek na canvasie,
+        // a kierunek przeciągnięcia palca od punktu startowego ustawia player.keys -
+        // ten sam obiekt, którego używa obsługa klawiatury w player.js.
+        (function setupTouchJoystick() {
+            const canvas = document.getElementById('canvas1');
+            const DEADZONE = 12; // px - minimalny dystans przeciągnięcia, żeby zarejestrować kierunek
+
+            let startX = null;
+            let startY = null;
+
+            function resetKeys() {
+                if (typeof player === 'undefined') return;
+                player.keys.up = false;
+                player.keys.down = false;
+                player.keys.left = false;
+                player.keys.right = false;
+            }
+
+            function updateKeysFromDelta(dx, dy) {
+                if (typeof player === 'undefined') return;
+                player.keys.right = dx > DEADZONE;
+                player.keys.left = dx < -DEADZONE;
+                player.keys.down = dy > DEADZONE;
+                player.keys.up = dy < -DEADZONE;
+            }
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const t = e.changedTouches[0];
+                startX = t.clientX;
+                startY = t.clientY;
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (startX === null) return;
+                e.preventDefault();
+                const t = e.changedTouches[0];
+                updateKeysFromDelta(t.clientX - startX, t.clientY - startY);
+            }, { passive: false });
+
+            const endTouch = (e) => {
+                if (startX === null) return;
+                e.preventDefault();
+                startX = null;
+                startY = null;
+                resetKeys();
+            };
+            canvas.addEventListener('touchend', endTouch);
+            canvas.addEventListener('touchcancel', endTouch);
+        })();
+
         // Pokazuje/ukrywa panele pogody i statystyk (domyślnie schowane pod przyciskiem ⚙️)
         function toggleUiPanels() {
             document.querySelectorAll('.ui-panel').forEach(panel => {
