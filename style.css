@@ -10,6 +10,14 @@
     transform: translate(-50%,-50%);
     position: absolute;
     border: 2px solid black;
+    /* Canvas ma stałą rozdzielczość rysowania 800x600, ale bez tego przeglądarka
+       renderuje go 1:1 w pikselach CSS - na wąskich ekranach (telefony) widać wtedy
+       tylko wycięty środkowy fragment sceny zamiast całej gry. max-width/height
+       ze width/height:auto skalują go proporcjonalnie do rozmiaru viewportu. */
+    max-width: 100vw;
+    max-height: 100vh;
+    width: auto;
+    height: auto;
 }
 
 /* Dodatkowa stylizacja dla lepszego efektu */
