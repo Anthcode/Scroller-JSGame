@@ -157,6 +157,58 @@
         .ui-toggle-btn:hover {
             transform: scale(1.1);
         }
+
+        /* Wirtualny D-pad - domyślnie ukryty, pokazujemy go tylko na urządzeniach
+           dotykowych (brak hover, "grube" wskazywanie palcem). Na desktopie
+           i tak jest WASD/strzałki, więc D-pad tylko by przeszkadzał. */
+        .touch-controls {
+            display: none;
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            .touch-controls {
+                /* Bez tego dziedziczy top:0 z globalnego "*{top:0}" i - mając ustawione
+                   też bottom - rozciąga się na cały ekran zamiast trzymać się dołu
+                   (dokładnie ten sam problem co wcześniej w .keyboard-info). */
+                top: auto;
+                display: grid;
+                grid-template-columns: repeat(3, 56px);
+                grid-template-rows: repeat(3, 56px);
+                gap: 4px;
+                position: absolute;
+                left: 20px;
+                bottom: 20px;
+                z-index: 1001;
+            }
+
+            /* Podpowiedź klawiszy jest bezużyteczna na dotyku - D-pad ją zastępuje */
+            .keyboard-info {
+                display: none;
+            }
+        }
+
+        .touch-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 22px;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        .touch-btn.active {
+            background: rgba(0, 255, 255, 0.35);
+        }
+
+        .touch-btn-up    { grid-column: 2; grid-row: 1; }
+        .touch-btn-left  { grid-column: 1; grid-row: 2; }
+        .touch-btn-right { grid-column: 3; grid-row: 2; }
+        .touch-btn-down  { grid-column: 2; grid-row: 3; }
     </style>
 </head>
 <body>
@@ -231,6 +283,14 @@
         <strong>⌨️ Klawisze:</strong> 1-Deszcz, 2-Śnieg, 3-Liście, 0-Słońce, T-Pauza cyklu
     </div>
 
+    <!-- Wirtualny D-pad do sterowania graczem na urządzeniach dotykowych -->
+    <div class="touch-controls">
+        <div class="touch-btn touch-btn-up" data-dir="up">▲</div>
+        <div class="touch-btn touch-btn-left" data-dir="left">◀</div>
+        <div class="touch-btn touch-btn-right" data-dir="right">▶</div>
+        <div class="touch-btn touch-btn-down" data-dir="down">▼</div>
+    </div>
+
     <!-- System animacji sprite'ów i encje gry (kolejność ma znaczenie - klasy bazowe najpierw) -->
     <script src="animatorController.js"></script>
     <script src="player.js"></script>
@@ -238,6 +298,30 @@
     <script src="script.js"></script>
     
     <script>
+        // Wirtualny D-pad steruje graczem przez ten sam obiekt player.keys, którego
+        // używa obsługa klawiatury w player.js - press/release ustawiają ten sam stan.
+        document.querySelectorAll('.touch-btn').forEach(btn => {
+            const dir = btn.dataset.dir;
+
+            const press = (e) => {
+                e.preventDefault();
+                if (typeof player !== 'undefined') player.keys[dir] = true;
+                btn.classList.add('active');
+            };
+            const release = (e) => {
+                e.preventDefault();
+                if (typeof player !== 'undefined') player.keys[dir] = false;
+                btn.classList.remove('active');
+            };
+
+            btn.addEventListener('touchstart', press, { passive: false });
+            btn.addEventListener('touchend', release);
+            btn.addEventListener('touchcancel', release);
+            btn.addEventListener('mousedown', press);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release);
+        });
+
         // Pokazuje/ukrywa panele pogody i statystyk (domyślnie schowane pod przyciskiem ⚙️)
         function toggleUiPanels() {
             document.querySelectorAll('.ui-panel').forEach(panel => {
