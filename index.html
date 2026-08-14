@@ -116,6 +116,10 @@
         }
 
         .keyboard-info {
+            /* Globalna reguła "*{top:0}" (style.css) w połączeniu z position:absolute
+               i samym "bottom" (bez własnego "top") rozciągała ten element na niemal
+               całą wysokość ekranu - "top: auto" to unieważnia. */
+            top: auto;
             position: absolute;
             bottom: 20px;
             left: 20px;
