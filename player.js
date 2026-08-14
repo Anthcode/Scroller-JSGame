@@ -1,17 +1,12 @@
 // ==== GRACZ ====
-// UWAGA: podmień poniższe ścieżki na własne spritesheety wygenerowane w
-// LPC Sprite Generator (https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/)
-// Zakładany rozmiar pojedynczej klatki to 64x64px. Wartości `row` w stanach
-// poniżej dopasuj do faktycznego układu wierszy w wyeksportowanym arkuszu.
-//
-// Przykład:
-// sheets: [
-//     'images/player/character.png',
-//     'images/player/character_variant2.png',
-// ],
+// images/player/character.png - proceduralnie wygenerowany pixel-art spritesheet
+// (skrypt: tools/generate_player_sprite.py), 64x64px/klatkę, układ wierszy
+// dokładnie taki jak w `states` poniżej. Chcesz podmienić na własną grafikę
+// z LPC Sprite Generatora (https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/)?
+// Wystarczy podmienić ścieżkę niżej i dopasować `row` do układu wierszy w Twoim arkuszu.
 const PLAYER_ANIM_DATA = {
     sheets: [
-        // 'images/player/character.png',
+        'images/player/character.png',
     ],
     frameWidth: 64,
     frameHeight: 64,
