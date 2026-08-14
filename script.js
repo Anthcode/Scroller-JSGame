@@ -218,8 +218,64 @@ function setParticleCount(count) {
     }
 }
 
-// ==== ZAKTUALIZOWANA FUNKCJA ANIME ====
-function anime() {
+// ==== ENCJE GRY (GRACZ, WROGOWIE) ====
+// Gracz startuje mniej więcej na wysokości "ziemi" z warstwy layer1
+const player = new Player(100, canvas.height - 180);
+
+// Prosty patrolujący wróg - do testowania kolizji i animacji hit/death
+const enemies = [
+    new Enemy(canvas.width - 200, canvas.height - 180, 120)
+];
+
+let gameOver = false;
+
+// Proste wykrywanie kolizji AABB (prostokąt-prostokąt)
+function checkCollision(a, b) {
+    return a.x < b.x + b.width &&
+           a.x + a.width > b.x &&
+           a.y < b.y + b.height &&
+           a.y + a.height > b.y;
+}
+
+function handlePlayerEnemyCollisions() {
+    if (!player.alive || gameOver) return;
+
+    for (const enemy of enemies) {
+        if (!enemy.alive) continue;
+
+        if (checkCollision(player.getBounds(), enemy.getBounds())) {
+            player.takeHit(1);
+            break; // jedno trafienie na klatkę wystarczy
+        }
+    }
+}
+
+// Rysuje pasek HP gracza w prawym dolnym rogu canvasu (górne rogi zasłaniają panele UI)
+function drawHud() {
+    ctx.save();
+    ctx.font = '16px Arial';
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'right';
+    ctx.fillText(`HP: ${player.hp} / ${player.maxHp}`, canvas.width - 15, canvas.height - 15);
+    ctx.textAlign = 'left';
+
+    if (gameOver) {
+        ctx.font = 'bold 40px Arial';
+        ctx.fillStyle = 'red';
+        ctx.textAlign = 'center';
+        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+    }
+    ctx.restore();
+}
+
+// ==== ZAKTUALIZOWANA FUNKCJA ANIME (Z DELTA TIME) ====
+let lastTimestamp = null;
+
+function anime(timestamp = 0) {
+  // Delta time w ms - pierwsza klatka nie ma poprzedniego timestampu, więc pomijamy update
+  const deltaTime = lastTimestamp === null ? 0 : timestamp - lastTimestamp;
+  lastTimestamp = timestamp;
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   layer11.update();
@@ -245,6 +301,27 @@ function anime() {
 
   layer1.update();
   layer1.draw();
+
+  // ENCJE GRY - rysowane na wierzchu, przed graczem aktualizujemy wrogów
+  if (!gameOver) {
+    enemies.forEach(enemy => enemy.update(deltaTime));
+    player.update(deltaTime, { left: 0, right: canvas.width, top: 0, bottom: canvas.height });
+
+    handlePlayerEnemyCollisions();
+
+    // Utrata wszystkich hp -> odtwarzamy animację śmierci, a game over dopiero po jej zakończeniu
+    if (!player.alive && player.animator.finished) {
+      gameOver = true;
+      console.log('💀 Game Over');
+    }
+  } else {
+    player.animator.update(deltaTime);
+  }
+
+  enemies.forEach(enemy => enemy.draw(ctx));
+  player.draw(ctx);
+
+  drawHud();
 
   requestAnimationFrame(anime);
 }
@@ -276,5 +353,6 @@ window.addEventListener('load', () => {
     }, 1000);
 });
 
-// Uruchomienie animacji
-anime();
+// Uruchomienie animacji - przez requestAnimationFrame, żeby pierwszy timestamp
+// był spójny z kolejnymi (inaczej pierwsze obliczone deltaTime byłoby ogromne)
+requestAnimationFrame(anime);
