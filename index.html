@@ -264,18 +264,17 @@
 
             function resetKeys() {
                 if (typeof player === 'undefined') return;
-                player.keys.up = false;
-                player.keys.down = false;
                 player.keys.left = false;
                 player.keys.right = false;
             }
 
+            // Gracz porusza się tylko lewo/prawo - przeciągnięcie w górę wywołuje
+            // skok (jump() sam pilnuje, żeby nie skakać powtórnie w powietrzu)
             function updateKeysFromDelta(dx, dy) {
                 if (typeof player === 'undefined') return;
                 player.keys.right = dx > DEADZONE;
                 player.keys.left = dx < -DEADZONE;
-                player.keys.down = dy > DEADZONE;
-                player.keys.up = dy < -DEADZONE;
+                if (dy < -DEADZONE) player.jump();
             }
 
             canvas.addEventListener('touchstart', (e) => {
