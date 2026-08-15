@@ -55,6 +55,7 @@ game.js                  stan gry (menu/playing/gameover), wynik, trudność, sp
 script.js                bootstrap: instancja gracza, pętla gry, sterowanie pogodą/dniem
 images/                  tła warstw paralaksy, spritesheety gracza i wroga
 tools/                   skrypty składające spritesheety z assetów źródłowych (patrz niżej)
+tests/                   testy e2e (Playwright) - patrz sekcja "Testy" niżej
 ```
 
 ## Assety graficzne
@@ -78,3 +79,19 @@ python3 -m http.server 8000
 ```
 
 i otwórz `http://localhost:8000/index.html`.
+
+## Testy
+
+Sama gra to statyczna strona bez buildu - `package.json`/`node_modules` służą wyłącznie testom e2e (Playwright), nie są potrzebne do samego uruchomienia gry.
+
+Gra trzyma cały stan w zwykłych zmiennych globalnych (bez modułów), więc testy sterują nim wprost przez `page.evaluate()` zamiast tylko klikać w UI - patrz `tests/helpers.js`. Część testów (np. `tests/combat.spec.js`, `tests/demo.spec.js`) steruje fizyką deterministycznie, stałym krokiem czasu, zamiast polegać na prawdziwym (zaszumionym) takcie przeglądarki - to dokładnie ta technika, którą dobrano geometrię stompa ducha i pętlę demo (patrz historia PR-ów #20/#21).
+
+```
+npm install
+npx playwright install --with-deps chromium   # tylko raz, pobiera przeglądarkę
+npm test
+```
+
+`npm test` sam odpala serwer HTTP na porcie 8123 (patrz `playwright.config.js`) i zamyka go po testach - nie trzeba nic uruchamiać ręcznie. `npm run test:ui` otwiera interaktywny UI-runner Playwrighta, `npm run test:headed` puszcza testy w widocznej przeglądarce.
+
+CI (`.github/workflows/ci.yml`) uruchamia całą suitę na każdym push/PR do `main`.

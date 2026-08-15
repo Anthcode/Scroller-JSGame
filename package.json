@@ -1,0 +1,14 @@
+{
+  "name": "parallax-fx",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Testy end-to-end (Playwright) dla gry Parallax FX. Sama gra to statyczna strona bez buildu (patrz README) - te zależności służą wyłącznie testom, nie są potrzebne do uruchomienia gry.",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}
