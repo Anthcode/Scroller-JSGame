@@ -14,6 +14,7 @@ Starsza wersja (Firebase, bez systemu gracza/wrogów): https://parallax-fx.web.a
 ## Funkcje
 
 - **Endless runner** — menu → rozgrywka → game over → restart bez przeładowania strony (`gameState` w `game.js`). Wynik za dystans i za zabójstwa (z mnożnikiem combo za serię stompów bez dotknięcia ziemi), rekord zapisywany w `localStorage`.
+- **Demo na ekranie menu** — zanim gracz wystartuje, canvas pokazuje zapętloną symulację rozgrywki (`updateDemo()`, `game.js`): biegnący gracz skacze na nadlatującego wroga i go depcze. Osobne instancje `Player`/`Enemy` (`demoPlayer`/`demoEnemy`) niepowiązane z prawdziwym stanem gry.
 - **Trudność rośnie z czasem** — tempo świata, częstotliwość spawnu wrogów i ich prędkość podążają za jedną czytelną krzywą (`getDifficulty()`, `game.js`), pełna trudność po 2 minutach przeżycia.
 - **Walka: skok na głowę (stomp)** — jedyny sposób pokonania wroga. Lądowanie na wrogu od góry (podczas opadania) zabija go i odbija gracza; kontakt z boku/od dołu zadaje graczowi obrażenia. Hitboxy gracza i wroga są wcięte względem przezroczystego marginesu sprite'ów, żeby kolizje odpowiadały temu, co widać na ekranie.
 - **Niezależność od odświeżania ekranu** — cały ruch (świat, gracz, wrogowie, cząsteczki) skalowany mnożnikiem `timeScale` względem 60 kl./s, więc tempo gry jest takie samo na wyświetlaczu 60Hz i 120Hz.
