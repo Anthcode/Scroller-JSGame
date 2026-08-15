@@ -1,4 +1,9 @@
 """
+UWAGA: images/player/character.png jest teraz wygenerowany z prawdziwej
+grafiki AI (ninja) przez tools/extract_player_sheet_from_ai_source.py.
+Uruchomienie TEGO skryptu nadpisze go z powrotem prostym proceduralnym
+"patyczakiem" - trzymaj się tego pliku tylko jako fallbacku/przykładu.
+
 Proceduralnie generuje spritesheet gracza (pixel-art) pasujący dokładnie do
 PLAYER_ANIM_DATA w player.js: 64x64px/klatkę, 6 wierszy:
   0 idle        (1 klatka)

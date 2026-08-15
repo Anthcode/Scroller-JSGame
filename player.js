@@ -1,8 +1,9 @@
 // ==== GRACZ ====
-// images/player/character.png - proceduralnie wygenerowany pixel-art spritesheet
-// (skrypt: tools/generate_player_sprite.py), 64x64px/klatkę, układ wierszy
-// dokładnie taki jak w `states` poniżej. Chcesz podmienić na własną grafikę
-// z LPC Sprite Generatora (https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/)?
+// images/player/character.png - pixel-artowy ninja wygenerowany modelem AI
+// (surowa grafika: tools/player_ai_source_raw.png, wycięta i ułożona w klatki
+// przez tools/extract_player_sheet_from_ai_source.py), 64x64px/klatkę, układ
+// wierszy dokładnie taki jak w `states` poniżej. Chcesz podmienić na własną
+// grafikę z LPC Sprite Generatora (https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/)?
 // Wystarczy podmienić ścieżkę niżej i dopasować `row` do układu wierszy w Twoim arkuszu.
 const PLAYER_ANIM_DATA = {
     sheets: [
