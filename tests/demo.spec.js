@@ -57,24 +57,30 @@ test.describe('Demo na ekranie menu', () => {
 
         const observed = await page.evaluate(async () => {
             function frame() { return new Promise(r => requestAnimationFrame(() => r())); }
-            let kills = 0, loops = 0, fallbackResets = 0, killedThisLoop = false, lastEnemyRef = demoEnemy;
+            // Liczymy tylko petle, ktore w PELNI sie zamknely (resetDemoLoop podmienil
+            // referencje demoEnemy) w oknie obserwacji - petla wciaz w toku na koncu okna
+            // jest pomijana, zeby nie liczyc "zabojstwa" w klatce, w ktorej wrog juz umarl,
+            // ale reset jeszcze nie zdazyl przeleciec (to gonilo wynik o +1 w CI - kills>loops).
+            let completedLoops = 0, killedLoops = 0, fallbackResets = 0;
+            let killedThisLoop = false, lastEnemyRef = demoEnemy;
 
             for (let i = 0; i < 720; i++) { // ~12s, ~3-4 petle demo (DEMO_LOOP_MS ~3.2s)
                 await frame();
-                if (!demoEnemy.alive && !killedThisLoop) { killedThisLoop = true; kills++; }
+                if (!demoEnemy.alive && !killedThisLoop) killedThisLoop = true;
                 if (demoEnemy !== lastEnemyRef) {
-                    loops++;
-                    if (!killedThisLoop) fallbackResets++;
+                    completedLoops++;
+                    if (killedThisLoop) killedLoops++;
+                    else fallbackResets++;
                     killedThisLoop = false;
                     lastEnemyRef = demoEnemy;
                 }
             }
-            return { kills, loops, fallbackResets, finalHp: demoPlayer.hp };
+            return { completedLoops, killedLoops, fallbackResets, finalHp: demoPlayer.hp };
         });
 
-        expect(observed.loops).toBeGreaterThan(0);
+        expect(observed.completedLoops).toBeGreaterThan(0);
         expect(observed.fallbackResets).toBe(0);
-        expect(observed.kills).toBe(observed.loops);
+        expect(observed.killedLoops).toBe(observed.completedLoops);
         expect(observed.finalHp).toBe(3); // demo nigdy nie powinno "boleć" demoPlayera
     });
 
