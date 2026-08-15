@@ -1,6 +1,6 @@
 // ==== RDZEŃ ====
 // Canvas, kontekst i stałe współdzielone przez wszystkie pozostałe pliki. Musi być
-// załadowany jako pierwszy <script> w index.html - world.js/player.js/enemy.js/game.js
+// załadowany jako pierwszy <script> w game-demo.html - world.js/player.js/enemy.js/game.js
 // czytają z niego canvas/ctx/GROUND_LINE_Y, a game.js/script.js korzystają z timeScale.
 
 const canvas = document.querySelector('canvas');

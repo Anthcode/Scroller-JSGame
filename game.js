@@ -337,7 +337,7 @@ function drawOverlay(title, hint, badge) {
 }
 
 // Rysuje HUD (wynik/rekord/combo/serduszka HP) i ewentualny ekran menu/game over.
-// Górne rogi canvasu są zajęte przez panel ⚙️ i statystyki (index.html), więc wynik
+// Górne rogi canvasu są zajęte przez panel ⚙️ i statystyki (game-demo.html), więc wynik
 // idzie na środek góry, a HP w prawy dolny róg (dawniej tekst "HP: n / m").
 function drawHud() {
     ctx.save();

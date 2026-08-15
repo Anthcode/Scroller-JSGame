@@ -1,6 +1,6 @@
 // ==== TŁO: PARALAKSA, CYKL DNIA/NOCY, POGODA ====
 // Przeniesione ze script.js przy refaktorze na pełną pętlę rozgrywki (menu/gra/game over).
-// Wszystkie globalne nazwy używane przez panel UI w index.html (gamespeed, windForce,
+// Wszystkie globalne nazwy używane przez panel UI w game-demo.html (gamespeed, windForce,
 // daySpeed, changeWeather, setParticleCount) zostają identyczne - inline onclick/onchange
 // odwołują się do nich bezpośrednio i cicho przestałyby działać po zmianie nazwy/zakresu.
 
