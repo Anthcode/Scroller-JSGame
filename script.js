@@ -328,10 +328,29 @@ const GROUND_LINE_Y = canvas.height - 116;
 
 const player = new Player(100, GROUND_LINE_Y - 96);
 
-// Prosty patrolujący wróg - do testowania kolizji i animacji hit/death
-const enemies = [
-    new Enemy(canvas.width - 200, GROUND_LINE_Y - 76, 120)
-];
+// Wrogowie spawnują się losowo poza prawą krawędzią ekranu i biegną w stronę gracza
+const enemies = [];
+let enemySpawnTimer = 0;
+let enemySpawnInterval = randomEnemySpawnInterval();
+
+function randomEnemySpawnInterval() {
+    return 1800 + Math.random() * 2200; // 1.8s - 4s
+}
+
+function spawnEnemy() {
+    const spawnX = canvas.width + 50 + Math.random() * 250;
+    enemies.push(new Enemy(spawnX, GROUND_LINE_Y - 76));
+}
+
+function updateEnemySpawner(deltaTime) {
+    enemySpawnTimer += deltaTime;
+
+    if (enemySpawnTimer >= enemySpawnInterval) {
+        enemySpawnTimer = 0;
+        enemySpawnInterval = randomEnemySpawnInterval();
+        spawnEnemy();
+    }
+}
 
 let gameOver = false;
 
@@ -415,10 +434,21 @@ function anime(timestamp = 0) {
 
   // ENCJE GRY - rysowane na wierzchu, przed graczem aktualizujemy wrogów
   if (!gameOver) {
-    enemies.forEach(enemy => enemy.update(deltaTime));
+    updateEnemySpawner(deltaTime);
+
+    enemies.forEach(enemy => enemy.update(deltaTime, player));
     player.update(deltaTime, { left: 0, right: canvas.width, top: 0, bottom: canvas.height });
 
     handlePlayerEnemyCollisions();
+
+    // Sprzątamy wrogów, którzy dokończyli animację śmierci albo minęli gracza
+    // i wyszli daleko poza lewą krawędź ekranu (żeby tablica nie rosła w nieskończoność)
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const enemy = enemies[i];
+      if ((!enemy.alive && enemy.animator.finished) || enemy.x + enemy.width < -200) {
+        enemies.splice(i, 1);
+      }
+    }
 
     // Utrata wszystkich hp -> odtwarzamy animację śmierci, a game over dopiero po jej zakończeniu
     if (!player.alive && player.animator.finished) {

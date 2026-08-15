@@ -63,16 +63,26 @@ class Enemy {
         }
     }
 
-    update(deltaTime) {
+    // `target` (opcjonalnie) - obiekt z x/width, do którego wróg ma dążyć (gracz).
+    // Gdy podany, wróg ignoruje patrol i po prostu goni gracza w poziomie;
+    // bez targetu zachowuje się jak wcześniej - patroluje między [startX, startX + patrolRange].
+    update(deltaTime, target = null) {
         const controlsLocked = !this.alive || this.animator.states[this.animator.currentState].locked;
 
         if (!controlsLocked) {
-            this.x += this.speed * this.direction;
+            if (target) {
+                const centerX = this.x + this.width / 2;
+                const targetCenterX = target.x + target.width / 2;
+                this.direction = targetCenterX < centerX ? -1 : 1;
+                this.x += this.speed * this.direction;
+            } else {
+                this.x += this.speed * this.direction;
 
-            if (this.x >= this.startX + this.patrolRange) {
-                this.direction = -1;
-            } else if (this.x <= this.startX) {
-                this.direction = 1;
+                if (this.x >= this.startX + this.patrolRange) {
+                    this.direction = -1;
+                } else if (this.x <= this.startX) {
+                    this.direction = 1;
+                }
             }
 
             this.animator.play('move');
