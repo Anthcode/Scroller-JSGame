@@ -48,6 +48,7 @@ class Player {
         this.invulnerableDuration = 1000;
 
         this.keys = { left: false, right: false };
+        this.facing = 'right'; // kierunek animacji biegu, gdy gracz stoi w miejscu
 
         // Jeśli nie podano jeszcze prawdziwych arkuszy LPC, używamy placeholdera,
         // żeby cały system animacji dało się przetestować od razu.
@@ -142,11 +143,15 @@ class Player {
         }
 
         if (!controlsLocked) {
-            // Wybór animacji na podstawie stanu skoku/ruchu
+            if (this.keys.left) this.facing = 'left';
+            else if (this.keys.right) this.facing = 'right';
+
+            // Ninja ma być cały czas w biegu - nawet stojąc w miejscu gra się
+            // animację biegu w ostatnio obranym kierunku zamiast idle.
             if (this.isJumping) this.animator.play('jump');
             else if (this.keys.left) this.animator.play('move-left');
             else if (this.keys.right) this.animator.play('move-right');
-            else this.animator.play('idle');
+            else this.animator.play('move-' + this.facing);
         }
 
         this.animator.update(deltaTime);
