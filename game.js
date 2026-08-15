@@ -37,9 +37,22 @@ function randomSpawnInterval(difficulty) {
     return difficulty.spawnMin + Math.random() * (difficulty.spawnMax - difficulty.spawnMin);
 }
 
+// Wprowadza warianty wroga stopniowo z czasem przeżycia zamiast wszystkich naraz od
+// startu - pierwsze ~15s to sam walker (żeby gracz najpierw ogarnął stomp na czymś
+// prostym), potem dochodzi szybszy/słabszy walkerFast, na końcu latający ghost (wymaga
+// skoku, więc najtrudniejszy). Wagi tasowane losowo spośród aktualnie odblokowanych typów.
+function pickEnemyType(elapsed) {
+    const pool = ['walker'];
+    if (elapsed >= 15000) pool.push('walkerFast', 'walkerFast');
+    if (elapsed >= 45000) pool.push('ghost');
+
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function spawnEnemy() {
     const spawnX = canvas.width + 50 + Math.random() * 250;
-    enemies.push(new Enemy(spawnX, GROUND_LINE_Y - 76));
+    const type = pickEnemyType(elapsedMs);
+    enemies.push(new Enemy(spawnX, GROUND_LINE_Y, type));
 }
 
 function updateEnemySpawner(deltaTime, difficulty) {
@@ -79,7 +92,16 @@ function handlePlayerEnemyCollisions() {
         // "od góry" (stopy klatkę temu były wyżej niż głowa wroga jest teraz) - a nie
         // po prostu w niego wszedł z boku. prevBottom jest odporniejsze na tunelowanie
         // niż próg odległości, bo świat i wróg mogą poruszać się kilka-kilkanaście px/klatkę.
-        const isStomp = player.velocityY > 0 && player.prevBottom <= enemyBounds.y;
+        //
+        // Latający wróg (ghost, enemy.js) hover-uje nad zasięgiem stojącego gracza - dotknąć
+        // go można WYŁĄCZNIE skacząc, więc każdy kontakt z nim jest już świadomie wymierzonym
+        // skokiem. Wymaganie precyzyjnego trafienia "od góry w trakcie opadania" jak przy
+        // naziemnym wrogu byłoby tu nierealistyczne: dostępne okno między zasięgiem stania a
+        // szczytem skoku to (zmierzone empirycznie) raptem ~41px - za mało na niezawodne
+        // trafienie, zwłaszcza na dotyku. Stąd isHoverKill zwalnia latające typy z tego
+        // wymogu; naziemne (walker/walkerFast) zachowują pełną logikę stomp-vs-hit.
+        const isHoverKill = !!enemy.config.hover;
+        const isStomp = isHoverKill || (player.velocityY > 0 && player.prevBottom <= enemyBounds.y);
 
         if (isStomp) {
             enemy.takeHit(enemy.hp); // jeden stomp = zgon, niezależnie od aktualnego hp wroga
@@ -87,7 +109,10 @@ function handlePlayerEnemyCollisions() {
             player.isJumping = true;
 
             combo++;
-            score += STOMP_SCORE_BASE * combo;
+            // Wartość zależna od typu wroga (ENEMY_TYPES w enemy.js) - trudniejsze warianty
+            // (szybszy walkerFast, latający ghost wymagający dobrze wymierzonego skoku) dają
+            // więcej punktów niż podstawowy walker.
+            score += (enemy.config.scoreValue || STOMP_SCORE_BASE) * combo;
         } else {
             player.takeHit(1);
             break; // trafienie z boku/od dołu - jedno wystarczy na klatkę
@@ -156,9 +181,15 @@ function updateGame(deltaTime) {
         if (!player.alive && player.animator.finished) {
             enterGameOver();
         }
+    } else if (gameState === 'gameover') {
+        // Game over - efekty parallax (Layers.update() w world.js czyta worldSpeed) mają
+        // się zatrzymać, żeby ekran końca gry nie scrollował się dalej w nieskończoność;
+        // 0 zamraża wszystkie warstwy w miejscu (nadal się rysują, tylko przestają przesuwać).
+        // Animator gracza dokańcza swoją animację (death), reszta stoi w miejscu.
+        worldSpeed = 0;
+        player.animator.update(deltaTime);
     } else {
-        // menu / gameover - tło żyje dalej (patrz script.js), encje tylko się rysują;
-        // animator gracza dokańcza swoją animację (np. death), reszta stoi w miejscu.
+        // menu - tło żyje dalej (patrz script.js), żeby ekran startowy nie był statyczny.
         worldSpeed = MENU_WORLD_SPEED;
         player.animator.update(deltaTime);
     }

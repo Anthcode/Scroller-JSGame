@@ -22,7 +22,7 @@ Starsza wersja (Firebase, bez systemu gracza/wrogów): https://parallax-fx.web.a
 - **Cykl dnia i nocy** — płynne przejścia kolorów nieba, słońce/księżyc, gwiazdy.
 - **System animacji sprite'ów** — generyczny `AnimatorController` (`animatorController.js`), oparty o dane: arkusz + stany + klatki, niezależny od konkretnej postaci.
 - **Gracz** (`player.js`) — ruch lewo/prawo, skok z grawitacją, HP, nietykalność po trafieniu, animacje idle/run/jump/hit/death.
-- **Wróg** (`enemy.js`) — płynie w lewo razem ze światem, odbicie sprite'a w locie (bez osobnych animacji kierunkowych), HP, hit/death (teraz faktycznie osiągalne przez stomp).
+- **Wrogowie** (`enemy.js`) — trzy typy (`ENEMY_TYPES`), odblokowywane stopniowo z czasem przeżycia: `walker` (naziemny, 2 hp), `walkerFast` (ta sama grafika, mniejszy/szybszy/1 hp, fioletowy tint na osobnym buforze offscreen), `ghost` (latający, unosi się nad zasięgiem stania - dotknięcie wymaga skoku i zawsze zabija, bez wymogu trafienia dokładnie "od góry"). Wszystkie płyną w lewo razem ze światem, odbicie sprite'a w locie (bez osobnych animacji kierunkowych), hit/death osiągalne przez stomp.
 - **Sterowanie**:
   - Klawiatura: `A`/`D` lub strzałki lewo/prawo — ruch, `W`/`Spacja`/strzałka w górę — skok; poza rozgrywką `Spacja`/`Enter` startuje/restartuje grę.
   - Dotyk: przytrzymaj i przeciągnij palcem po canvasie (niewidoczny joystick) — bez żadnych przycisków na ekranie; poza rozgrywką dotknięcie startuje/restartuje grę.
@@ -58,12 +58,13 @@ tools/                   skrypty składające spritesheety z assetów źródłow
 
 ## Assety graficzne
 
-Sprite'y gracza i wroga (`images/player/character.png`, `images/enemy/enemy.png`) są złożone z oryginalnych, ręcznie rysowanych assetów tej samej gry (odzyskanych z wcześniejszego deployu na Firebase) — źródła w `tools/original_game_assets/`, skrypty składające w:
+Sprite'y gracza i wrogów (`images/player/character.png`, `images/enemy/enemy.png`, `images/enemy/ghost.png`) są złożone z oryginalnych, ręcznie rysowanych assetów tej samej gry (odzyskanych z wcześniejszego deployu na Firebase) — źródła w `tools/original_game_assets/`, skrypty składające w:
 
 - `tools/compose_player_sheet.py` — idle/run/jump/die z oryginalnych arkuszy, `move-left` jako lustrzane odbicie biegu.
 - `tools/compose_enemy_sheet.py` — 2-klatkowy chód wroga, hit/death syntetyzowane (tint, obrót+zanik).
+- `tools/compose_fly_enemy_sheet.py` — duch (`ghost`), move to naturalna animacja lotu z assetu (falujący "ogon"), death to zanikanie+powiększenie zamiast obrotu.
 
-Uruchomienie: `pip install Pillow && python3 tools/compose_player_sheet.py` (analogicznie dla wroga).
+Uruchomienie: `pip install Pillow && python3 tools/compose_player_sheet.py` (analogicznie dla wroga/ducha).
 
 Alternatywne/zapasowe generatory (proceduralny pixel-art, AI-generowany ninja) też są w `tools/`, oznaczone jako fallback — nie uruchamiaj ich bez potrzeby, bo nadpiszą obecną grafikę.
 
