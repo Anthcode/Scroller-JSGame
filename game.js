@@ -168,6 +168,11 @@ function updateGame(deltaTime) {
 document.addEventListener('keydown', (e) => {
     if ((e.key === ' ' || e.key === 'Enter') && gameState !== 'playing') {
         e.preventDefault();
+        // Ten sam listener typu keydown w player.js (rejestrowany później, dopiero gdy
+        // script.js tworzy `new Player(...)`) sprawdza `gameState === 'playing'` dla Spacji -
+        // bez stopImmediatePropagation ten handler zdążyłby przełączyć stan PRZED tamtym
+        // sprawdzeniem, więc restart Spacją od razu wywoływał też skok w tej samej klatce.
+        e.stopImmediatePropagation();
         startGame();
     }
 });
