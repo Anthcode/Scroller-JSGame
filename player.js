@@ -25,6 +25,10 @@ const PLAYER_ANIM_DATA = {
 
 class Player {
     constructor(x, y) {
+        // Zapamiętane na potrzeby reset() (start/restart rozgrywki - patrz game.js).
+        this.spawnX = x;
+        this.spawnY = y;
+
         this.x = x;
         this.y = y;
         this.width = 96;
@@ -38,6 +42,11 @@ class Player {
         this.isJumping = false;
         this.gravity = 0.6;
         this.jumpStrength = -12;
+
+        // Pozycja stóp z KOŃCA poprzedniej klatki - używana przez handlePlayerEnemyCollisions
+        // (game.js) do wykrycia stompa: czy gracz w tej klatce przeciął stopami głowę
+        // wroga "od góry", a nie po prostu w nią wszedł z boku.
+        this.prevBottom = y + this.height;
 
         this.maxHp = 3;
         this.hp = this.maxHp;
@@ -80,7 +89,12 @@ class Player {
             case 'd': case 'D': case 'ArrowRight':
                 this.keys.right = isDown; break;
             case 'w': case 'W': case 'ArrowUp': case ' ':
-                if (isDown) this.jump();
+                // Poza stanem 'playing' Spacja/Strzałka-góra startuje/restartuje grę
+                // (patrz game.js) zamiast skakać - inaczej wejście do gry wywoływałoby
+                // od razu skok. gameState jest zdefiniowany w game.js, ładowanym po
+                // player.js, ale ten handler wykonuje się dopiero przy realnym keydown,
+                // czyli długo po tym, jak wszystkie skrypty się już wczytały.
+                if (isDown && (typeof gameState === 'undefined' || gameState === 'playing')) this.jump();
                 break;
         }
     }
@@ -110,7 +124,33 @@ class Player {
         }
     }
 
+    // Przywraca gracza do stanu startowego - wołane przy starcie i restarcie gry (game.js).
+    // Wykorzystuje AnimatorController.reset(), który wcześniej nigdzie nie był używany.
+    reset() {
+        this.x = this.spawnX;
+        this.y = this.spawnY;
+        this.groundY = this.spawnY;
+        this.prevBottom = this.spawnY + this.height;
+
+        this.velocityX = 0;
+        this.velocityY = 0;
+        this.isJumping = false;
+
+        this.hp = this.maxHp;
+        this.alive = true;
+        this.invulnerable = false;
+        this.invulnerableTimer = 0;
+
+        this.keys.left = false;
+        this.keys.right = false;
+        this.facing = 'right';
+
+        this.animator.reset('idle');
+    }
+
     update(deltaTime, bounds) {
+        this.prevBottom = this.y + this.height;
+
         if (this.invulnerable) {
             this.invulnerableTimer += deltaTime;
             if (this.invulnerableTimer >= this.invulnerableDuration) {
@@ -125,7 +165,7 @@ class Player {
             this.velocityX = 0;
             if (this.keys.left) this.velocityX = -this.speed;
             if (this.keys.right) this.velocityX = this.speed;
-            this.x += this.velocityX;
+            this.x += this.velocityX * timeScale;
 
             if (bounds) {
                 this.x = Math.max(bounds.left, Math.min(bounds.right - this.width, this.x));
@@ -134,8 +174,8 @@ class Player {
 
         // Grawitacja działa niezależnie od tego, czy sterowanie jest zablokowane
         // (np. w trakcie animacji hit gracz nadal powinien opadać na ziemię)
-        this.y += this.velocityY;
-        this.velocityY += this.gravity;
+        this.y += this.velocityY * timeScale;
+        this.velocityY += this.gravity * timeScale;
 
         if (this.y >= this.groundY) {
             this.y = this.groundY;
@@ -176,7 +216,16 @@ class Player {
         ctx.globalAlpha = 1;
     }
 
+    // Wcięty hitbox - klatka 150x150 rysowana w boxie 96x96 ma spory przezroczysty margines
+    // (do ~26px na stronę w skoku), więc pełny box dawał trafienia "z dystansu" - przy
+    // stompie to zabójcze (trafienie z boku, mimo że wizualnie gracz jest nad wrogiem).
     getBounds() {
-        return { x: this.x, y: this.y, width: this.width, height: this.height };
+        const insetX = 22, insetTop = 6, insetBottom = 4;
+        return {
+            x: this.x + insetX,
+            y: this.y + insetTop,
+            width: this.width - insetX * 2,
+            height: this.height - insetTop - insetBottom
+        };
     }
 }
