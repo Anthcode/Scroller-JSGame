@@ -1,4 +1,9 @@
 """
+UWAGA: images/player/character.png jest teraz złożony z ORYGINALNYCH assetów
+gry (tools/compose_player_sheet.py, tools/original_game_assets/) - lepszej
+jakości niż ten AI-wygenerowany ninja. Uruchomienie TEGO skryptu nadpisze
+je z powrotem tą starszą grafiką - trzymaj się go tylko jako fallbacku.
+
 Wycina spritesheet gracza (images/player/character.png) z surowego obrazu
 wygenerowanego przez model AI (tools/player_ai_source_raw.png, patrz prompt
 w README/rozmowie - postać "ninja", układ 1/9/9/6/6/6 klatek na wiersz).

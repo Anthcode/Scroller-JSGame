@@ -1,15 +1,19 @@
 // ==== WRÓG ====
-// Podobnie jak w player.js - podmień poniższe ścieżki na własne arkusze
-// (np. wygenerowane w LPC Sprite Generator, 64x64px na klatkę).
+// images/enemy/enemy.png - złożony z oryginalnego assetu tej samej gry
+// (wcześniejszy deploy: https://parallax-fx.web.app/, patrz
+// tools/original_game_assets/enemy.png). Skrypt składający:
+// tools/compose_enemy_sheet.py. Oryginał miał tylko 2-klatkowy chód, bez
+// animacji trafienia/śmierci - hit i death są tu syntetyzowane (tint,
+// obrót+zanik). 110x110px/klatkę, układ wierszy jak w `states` poniżej.
 const ENEMY_ANIM_DATA = {
     sheets: [
-        // 'images/enemy/enemy.png',
+        'images/enemy/enemy.png',
     ],
-    frameWidth: 64,
-    frameHeight: 64,
+    frameWidth: 110,
+    frameHeight: 110,
     states: {
         idle:  { row: 0, frameCount: 1, frameInterval: 200, startFrame: 0, loop: true,  locked: false, next: null },
-        move:  { row: 1, frameCount: 8, frameInterval: 90,  startFrame: 0, loop: true,  locked: false, next: null },
+        move:  { row: 1, frameCount: 2, frameInterval: 150, startFrame: 0, loop: true,  locked: false, next: null },
         hit:   { row: 2, frameCount: 4, frameInterval: 70,  startFrame: 0, loop: false, locked: true,  next: 'idle' },
         death: { row: 3, frameCount: 6, frameInterval: 120, startFrame: 0, loop: false, locked: true,  next: null }
     },
@@ -20,8 +24,8 @@ class Enemy {
     constructor(x, y, patrolRange = 150) {
         this.x = x;
         this.y = y;
-        this.width = 64;
-        this.height = 64;
+        this.width = 76;
+        this.height = 76;
         this.speed = 1.2;
 
         this.hp = 2;
@@ -38,7 +42,7 @@ class Enemy {
                 frameWidth: ENEMY_ANIM_DATA.frameWidth,
                 frameHeight: ENEMY_ANIM_DATA.frameHeight,
                 rows: 4,
-                cols: 8,
+                cols: 6,
                 color: '#D2691E'
             })];
 

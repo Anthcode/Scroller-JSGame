@@ -322,12 +322,15 @@ function setParticleCount(count) {
 }
 
 // ==== ENCJE GRY (GRACZ, WROGOWIE) ====
-// Gracz startuje mniej więcej na wysokości "ziemi" z warstwy layer1
-const player = new Player(100, canvas.height - 180);
+// Wspólna "linia gruntu" (stopy postaci) dopasowana do warstwy layer1,
+// niezależna od wysokości sprite'a - każda encja liczy swoje y od tego samego dołu.
+const GROUND_LINE_Y = canvas.height - 116;
+
+const player = new Player(100, GROUND_LINE_Y - 96);
 
 // Prosty patrolujący wróg - do testowania kolizji i animacji hit/death
 const enemies = [
-    new Enemy(canvas.width - 200, canvas.height - 180, 120)
+    new Enemy(canvas.width - 200, GROUND_LINE_Y - 76, 120)
 ];
 
 let gameOver = false;
