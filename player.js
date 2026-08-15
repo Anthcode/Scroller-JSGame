@@ -24,7 +24,10 @@ const PLAYER_ANIM_DATA = {
 };
 
 class Player {
-    constructor(x, y) {
+    // bindControls: false pomija podpięcie prawdziwych listenerów klawiatury - używane przez
+    // demoPlayer (game.js), żeby gracz w pętli demo na ekranie menu nie reagował na realne
+    // wciśnięcia strzałek/WASD widza i nie zbaczał ze skryptowanej trasy.
+    constructor(x, y, { bindControls = true } = {}) {
         // Zapamiętane na potrzeby reset() (start/restart rozgrywki - patrz game.js).
         this.spawnX = x;
         this.spawnY = y;
@@ -74,7 +77,7 @@ class Player {
 
         this.animator = new AnimatorController({ ...PLAYER_ANIM_DATA, sheets });
 
-        this._bindControls();
+        if (bindControls) this._bindControls();
     }
 
     _bindControls() {

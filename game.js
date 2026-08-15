@@ -120,6 +120,70 @@ function handlePlayerEnemyCollisions() {
     }
 }
 
+// ==== DEMO (EKRAN MENU) ====
+// Krótka, zapętlona symulacja rozgrywki widoczna na canvasie zanim gracz wystartuje - biegnący
+// gracz skacze na nadlatującego wroga i go depcze, po czym pętla się resetuje. Osobne instancje
+// Player/Enemy (nie te używane w realnej rozgrywce - `player`/`enemies` powstają dopiero w
+// script.js), więc demo nie rusza prawdziwego stanu gry ani się z nim nie myli. demoPlayer
+// dostaje bindControls:false (patrz player.js), żeby realne strzałki/WASD widza nie zbijały go
+// ze skryptowanej trasy - ruch/skok sterowane są tu wyłącznie przez updateDemo() poniżej.
+const DEMO_PLAYER_X = 100;
+const demoPlayer = new Player(DEMO_PLAYER_X, GROUND_LINE_Y - 96, { bindControls: false });
+let demoEnemy = null;
+let demoElapsed = 0;
+const DEMO_LOOP_MS = 3200; // fallback - gdyby coś poszło nie tak z timingiem skoku, pętla i tak się zresetuje
+
+// Dystans (px) przed graczem, przy którym demo wywołuje skok - dobrany empirycznie (Playwright,
+// symulacja realnej fizyki skoku, tak samo jak przy strojeniu ducha - enemy.js) tak, żeby gracz
+// wylądował na wrogu W TRAKCIE OPADANIA (czyli stomp), a nie po prostu w niego wszedł z boku.
+const DEMO_JUMP_LEAD_PX = 200;
+
+function resetDemoLoop() {
+    demoPlayer.reset();
+    demoPlayer.x = DEMO_PLAYER_X;
+    demoEnemy = new Enemy(canvas.width + 40, GROUND_LINE_Y, 'walker');
+    demoElapsed = 0;
+}
+
+function updateDemo(deltaTime) {
+    if (!demoEnemy) resetDemoLoop();
+
+    demoElapsed += deltaTime;
+    // Realne strzałki/WASD widza i tak nie są podpięte (bindControls:false), ale na wszelki
+    // wypadek trzymamy ruch poziomy wyłącznie skryptowany - demoPlayer.x ma się zmieniać
+    // tylko przez fizykę skoku, nigdy przez keys.
+    demoPlayer.keys.left = false;
+    demoPlayer.keys.right = false;
+
+    demoEnemy.update(deltaTime, MENU_WORLD_SPEED, 0);
+    demoPlayer.update(deltaTime, { left: 0, right: canvas.width, top: 0, bottom: canvas.height });
+
+    if (!demoPlayer.isJumping && demoEnemy.alive &&
+        demoEnemy.x > demoPlayer.x && demoEnemy.x - demoPlayer.x < DEMO_JUMP_LEAD_PX) {
+        demoPlayer.jump();
+    }
+
+    if (demoEnemy.alive) {
+        const pb = demoPlayer.getBounds();
+        const eb = demoEnemy.getBounds();
+        // Prościej niż w prawdziwej rozgrywce (handlePlayerEnemyCollisions): tam stomp wymaga
+        // złapania DOKŁADNIE klatki przejścia (prevBottom <= enemyTop), bo od tego zależy
+        // sprawiedliwość względem gracza. Tu liczy się tylko, żeby demo ładnie wyglądało - więc
+        // wystarczy nakładanie + opadanie (velocityY > 0), bez łapania jednej konkretnej klatki.
+        // Zmierzone empirycznie (Playwright): przy identycznej, w pełni deterministycznej
+        // fizyce ścisły wariant chybiał o pojedyncze piksele/klatki mimo poprawnego timingu skoku.
+        if (checkCollision(pb, eb) && demoPlayer.velocityY > 0) {
+            demoEnemy.takeHit(demoEnemy.hp);
+            demoPlayer.velocityY = STOMP_BOUNCE_VELOCITY;
+            demoPlayer.isJumping = true;
+        }
+    }
+
+    if ((!demoEnemy.alive && demoEnemy.animator.finished) || demoElapsed > DEMO_LOOP_MS) {
+        resetDemoLoop();
+    }
+}
+
 // ==== START / RESTART ====
 // Jedna funkcja obsługuje zarówno start z menu, jak i restart po game over - w obu
 // przypadkach trzeba sprowadzić WSZYSTKO do stanu startowego, więc różnicowanie nie miałoby
@@ -189,9 +253,10 @@ function updateGame(deltaTime) {
         worldSpeed = 0;
         player.animator.update(deltaTime);
     } else {
-        // menu - tło żyje dalej (patrz script.js), żeby ekran startowy nie był statyczny.
+        // menu - tło żyje dalej (patrz script.js), żeby ekran startowy nie był statyczny;
+        // updateDemo() napędza zapętloną symulację rozgrywki (patrz sekcja DEMO wyżej).
         worldSpeed = MENU_WORLD_SPEED;
-        player.animator.update(deltaTime);
+        updateDemo(deltaTime);
     }
 }
 

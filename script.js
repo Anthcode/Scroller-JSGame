@@ -48,8 +48,15 @@ function anime(timestamp = 0) {
   // Tło i pogoda żyją zawsze; sama rozgrywka jest aktywna tylko w stanie 'playing'.
   updateGame(deltaTime);
 
-  enemies.forEach(enemy => enemy.draw(ctx));
-  player.draw(ctx);
+  // Na ekranie menu zamiast prawdziwego gracza/wrogów (jeszcze nietkniętych) rysujemy
+  // zapętloną demo-symulację (demoPlayer/demoEnemy, napędzane przez updateDemo() w game.js).
+  if (gameState === 'menu') {
+    if (demoEnemy) demoEnemy.draw(ctx);
+    demoPlayer.draw(ctx);
+  } else {
+    enemies.forEach(enemy => enemy.draw(ctx));
+    player.draw(ctx);
+  }
 
   drawHud();
 
