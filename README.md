@@ -28,8 +28,9 @@ Starsza wersja (Firebase, bez systemu gracza/wrogów): https://parallax-fx.web.a
   - Klawiatura: `A`/`D` lub strzałki lewo/prawo — ruch, `W`/`Spacja`/strzałka w górę — skok; poza rozgrywką `Spacja`/`Enter` startuje/restartuje grę.
   - Dotyk: przytrzymaj i przeciągnij palcem po canvasie (niewidoczny joystick) — bez żadnych przycisków na ekranie; poza rozgrywką dotknięcie startuje/restartuje grę.
   - `1`/`2`/`3`/`0` — deszcz/śnieg/liście/słońce, `T` — pauza cyklu dnia/nocy.
-- Panel pogody/statystyk domyślnie schowany pod przyciskiem ⚙️ w rogu ekranu.
+- Panel pogody/statystyk domyślnie schowany pod przyciskiem ⚙️ w rogu ekranu (dostępny przy bezpośrednim otwarciu `game-demo.html` — na ekranie startowym `index.html` jest ukryty, żeby nie zasłaniać sceny widocznej przez wycięcie w grafice ramki).
 - Canvas responsywny — skaluje się do szerokości/wysokości viewportu (działa na telefonach).
+- **Ekran startowy** (`index.html`) — pikselartowa ramka (`images/parallax-frame-cutout.png`) z wypalonym tytułem, przyciskiem ZAGRAJ, licznikiem rekordu i sercami HP. W wyciętym oknie ramki renderuje się prawdziwy silnik gry (`game-demo.html` w `<iframe>`) w swojej wbudowanej pętli demo/menu; kliknięcie w niewidoczną hit-area nad grafiką przycisku uruchamia realną rozgrywkę (`startGame()`) w tym samym canvasie.
 
 ## Sterowanie (skrót)
 
@@ -44,8 +45,8 @@ Starsza wersja (Firebase, bez systemu gracza/wrogów): https://parallax-fx.web.a
 ## Struktura projektu
 
 ```
-index.html               układ strony, panele UI, wirtualny joystick dotykowy
-style.css                responsywny canvas, tło strony
+index.html               ekran startowy: grafika ramki, przycisk ZAGRAJ, osadza game-demo.html w iframe
+game-demo.html           silnik gry: canvas, panele UI, wirtualny joystick dotykowy
 core.js                  canvas/ctx, stałe wspólne, timeScale, bezpieczny localStorage
 animatorController.js    generyczny system animacji sprite'ów (Animator Controller)
 world.js                 warstwy paralaksy, cykl dnia/nocy, pogoda/cząsteczki
@@ -78,7 +79,7 @@ To statyczna strona bez buildu - wystarczy dowolny serwer HTTP:
 python3 -m http.server 8000
 ```
 
-i otwórz `http://localhost:8000/index.html`.
+i otwórz `http://localhost:8000/index.html` (ekran startowy). Żeby otworzyć sam silnik gry pełnoekranowo, z odsłoniętym panelem pogody/statystyk, wejdź na `http://localhost:8000/game-demo.html`.
 
 ## Testy
 

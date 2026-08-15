@@ -1,395 +1,61 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CanvaS JS - Enhanced Parallax</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        /* Dodatkowe style dla kontrolek */
-        .weather-controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.85);
-            padding: 20px;
-            border-radius: 15px;
-            color: white;
-            font-family: Arial, sans-serif;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-        }
-
-        .weather-controls h3 {
-            margin: 0 0 15px 0;
-            color: #00ffff;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-        }
-
-        .weather-btn {
-            margin: 5px;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .weather-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .rain-btn {
-            background: linear-gradient(45deg, #4A90E2, #357ABD);
-            color: white;
-        }
-
-        .snow-btn {
-            background: linear-gradient(45deg, #E8F4F8, #B8D4DA);
-            color: #333;
-        }
-
-        .leaves-btn {
-            background: linear-gradient(45deg, #D2691E, #A0522D);
-            color: white;
-        }
-
-        .sun-btn {
-            background: linear-gradient(45deg, #87CEEB, #4682B4);
-            color: white;
-        }
-
-        .control-group {
-            margin: 15px 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .control-group label {
-            color: #ccc;
-            font-size: 14px;
-            margin-right: 10px;
-            min-width: 100px;
-        }
-
-        .control-group input[type="range"] {
-            flex: 1;
-            margin: 0 10px;
-            accent-color: #00ffff;
-        }
-
-        .value-display {
-            color: #00ffff;
-            font-weight: bold;
-            min-width: 40px;
-            text-align: right;
-        }
-
-        .stats-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.85);
-            padding: 15px;
-            border-radius: 10px;
-            color: #00ffff;
-            font-family: Arial, sans-serif;
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
-        }
-
-        .stats-panel h4 {
-            margin: 0 0 10px 0;
-            color: #fff;
-        }
-
-        .stat-item {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-
-        .keyboard-info {
-            /* Globalna reguła "*{top:0}" (style.css) w połączeniu z position:absolute
-               i samym "bottom" (bez własnego "top") rozciągała ten element na niemal
-               całą wysokość ekranu - "top: auto" to unieważnia. */
-            top: auto;
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 8px;
-            color: #ccc;
-            font-size: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Panele pogody/statystyk są domyślnie ukryte - pokazuje je przycisk toggle */
-        .ui-panel.hidden {
-            display: none;
-        }
-
-        .ui-toggle-btn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.85);
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            color: #00ffff;
-            font-size: 20px;
-            line-height: 1;
-            cursor: pointer;
-            z-index: 1002;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            transition: transform 0.2s ease;
-        }
-
-        .ui-toggle-btn:hover {
-            transform: scale(1.1);
-        }
-
-        @media (hover: none) and (pointer: coarse) {
-            /* Podpowiedź klawiszy jest bezużyteczna na urządzeniu dotykowym -
-               sterowanie to przytrzymaj-i-przeciągnij na samym canvasie. */
-            .keyboard-info {
-                display: none;
-            }
-        }
-
-        #canvas1 {
-            /* Zapobiega przewijaniu/odświeżaniu strony gestem podczas przeciągania
-               palcem po canvasie - inaczej przeglądarka próbuje scrollować stronę. */
-            touch-action: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Parallax FX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #05070f; font-family: 'Rajdhani', Arial, sans-serif; }
+  .stage { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .card { position: relative; height: min(100vh, 177.8vw); aspect-ratio: 853 / 1844; max-width: 100vw; }
+  #gameFrame { position: absolute; left: 12.9%; top: 25.8%; width: 74.3%; height: 40.3%; border: none; z-index: 1; pointer-events: none; }
+  #gameFrame.playing { pointer-events: auto; }
+  .frame-art { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; image-rendering: pixelated; }
+  #playHit { position: absolute; left: 11.9%; top: 77.5%; width: 75.9%; height: 9%; z-index: 3; cursor: pointer; animation: ctaPulse 2.2s ease-in-out infinite; }
+  #playHit:hover { animation: none; filter: brightness(1.15); }
+  #playHit.hidden { display: none; }
+  #backBtn { position: absolute; top: 2%; left: 5%; z-index: 4; font-size: 11px; color: #00ffff; cursor: pointer; background: rgba(10,16,34,0.6); border: 1px solid rgba(0,255,255,0.35); backdrop-filter: blur(6px); padding: 8px 14px; border-radius: 4px; font-family: 'Press Start 2P', monospace; letter-spacing: 0.02em; display: none; }
+  #backBtn:hover { background: rgba(0,255,255,0.15); }
+  #backBtn.visible { display: block; }
+  #settingsBtn { position: absolute; top: 1.5%; right: 4%; width: 8%; aspect-ratio: 1; border-radius: 50%; background: rgba(0,20,20,0.55); border: 2px solid #00ffff; box-shadow: 0 0 10px rgba(0,255,255,0.6); z-index: 4; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  #settingsBtn:hover { background: rgba(0,255,255,0.18); transform: rotate(35deg); }
+  #settingsBtn div { width: 36%; aspect-ratio: 1; border-radius: 50%; border: 2px solid #00ffff; }
+  @keyframes ctaPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+</style>
 </head>
 <body>
-    <center>
-        <h1>Parallax FX</h1>
-    </center>
-    
-    <canvas id="canvas1"></canvas>
+<div class="stage">
+  <div class="card">
+    <iframe id="gameFrame" src="game-demo.html" title="Podgląd gry"></iframe>
+    <img class="frame-art" src="images/parallax-frame-cutout.png" alt="">
+    <div id="playHit"></div>
+    <div id="backBtn">← MENU</div>
+    <div id="settingsBtn"><div></div></div>
+  </div>
+</div>
+<script>
+  const gameFrame = document.getElementById('gameFrame');
+  const playHit = document.getElementById('playHit');
+  const backBtn = document.getElementById('backBtn');
 
-    <!-- Przycisk pokazujący/ukrywający panele pogody i statystyk -->
-    <button class="ui-toggle-btn" id="uiToggleBtn" onclick="toggleUiPanels()" title="Pokaż/ukryj panele pogody i statystyk">⚙️</button>
+  playHit.addEventListener('click', () => {
+    gameFrame.classList.add('playing');
+    playHit.classList.add('hidden');
+    backBtn.classList.add('visible');
+    setTimeout(() => {
+      try { gameFrame.contentWindow.startGame && gameFrame.contentWindow.startGame(); } catch (e) {}
+    }, 50);
+  });
 
-    <!-- Panel kontrolek pogody -->
-    <div class="weather-controls ui-panel hidden">
-        <h3>🌦️ Kontrola Pogody</h3>
-        
-        <div>
-            <button class="weather-btn rain-btn" onclick="changeWeather('rain')">
-                🌧️ Deszcz
-            </button>
-            <button class="weather-btn snow-btn" onclick="changeWeather('snow')">
-                ❄️ Śnieg
-            </button>
-            <button class="weather-btn leaves-btn" onclick="changeWeather('leaves')">
-                🍃 Liście
-            </button>
-            <button class="weather-btn sun-btn" onclick="changeWeather('none')">
-                ☀️ Słońce
-            </button>
-        </div>
-        
-        <div class="control-group">
-            <label>Intensywność:</label>
-            <input type="range" id="particleSlider" min="0" max="150" value="80" 
-                   onchange="setParticleCount(this.value); updateSliderValue('particles', this.value)">
-            <span class="value-display" id="particlesValue">80</span>
-        </div>
-        
-        <div class="control-group">
-            <label>Siła wiatru:</label>
-            <input type="range" id="windSlider" min="0" max="3" step="0.1" value="1" 
-                   onchange="windForce = parseFloat(this.value); updateSliderValue('wind', this.value)">
-            <span class="value-display" id="windValue">1.0</span>
-        </div>
-        
-        <div class="control-group">
-            <label>Prędkość gry:</label>
-            <input type="range" id="speedSlider" min="0.5" max="5" step="0.1" value="1"
-                   onchange="gamespeed = parseFloat(this.value); updateSliderValue('speed', this.value)">
-            <span class="value-display" id="speedValue">1.0</span>
-        </div>
-
-        <div class="control-group">
-            <label>Szybkość dnia:</label>
-            <input type="range" id="daySpeedSlider" min="0" max="5" step="0.1" value="1"
-                   onchange="daySpeed = parseFloat(this.value) / (60 * 60); updateSliderValue('dayspeed', this.value)">
-            <span class="value-display" id="dayspeedValue">1.0</span>
-        </div>
-    </div>
-    
-    <!-- Panel statystyk -->
-    <div class="stats-panel ui-panel hidden">
-        <h4>📊 Statystyki</h4>
-        <div class="stat-item">Cząsteczki: <span id="particleCount">0</span></div>
-        <div class="stat-item">Pogoda: <span id="currentWeather">Słońce</span></div>
-        <div class="stat-item">FPS: <span id="fpsCounter">60</span></div>
-        <div class="stat-item">Pora dnia: <span id="timeOfDay">Noc 🌙</span></div>
-    </div>
-    
-    <!-- Informacje o klawiszach -->
-    <div class="keyboard-info">
-        <strong>⌨️ Klawisze:</strong> 1-Deszcz, 2-Śnieg, 3-Liście, 0-Słońce, T-Pauza cyklu
-    </div>
-
-    <!-- Kolejność ma znaczenie: core.js (canvas/stałe) najpierw, potem animator i klasy
-         encji, game.js (stan/wynik/HUD) przed bootstrapem, który je wszystkie spina. -->
-    <script src="core.js"></script>
-    <script src="animatorController.js"></script>
-    <script src="world.js"></script>
-    <script src="player.js"></script>
-    <script src="enemy.js"></script>
-    <script src="game.js"></script>
-    <script src="script.js"></script>
-    
-    <script>
-        // Niewidoczny joystick: dotknięcie i przytrzymanie gdziekolwiek na canvasie,
-        // a kierunek przeciągnięcia palca od punktu startowego ustawia player.keys -
-        // ten sam obiekt, którego używa obsługa klawiatury w player.js.
-        (function setupTouchJoystick() {
-            const canvas = document.getElementById('canvas1');
-            const DEADZONE = 12; // px - minimalny dystans przeciągnięcia, żeby zarejestrować kierunek
-
-            let startX = null;
-            let startY = null;
-
-            function resetKeys() {
-                if (typeof player === 'undefined') return;
-                player.keys.left = false;
-                player.keys.right = false;
-            }
-
-            // Gracz porusza się tylko lewo/prawo - przeciągnięcie w górę wywołuje
-            // skok (jump() sam pilnuje, żeby nie skakać powtórnie w powietrzu)
-            function updateKeysFromDelta(dx, dy) {
-                if (typeof player === 'undefined') return;
-                player.keys.right = dx > DEADZONE;
-                player.keys.left = dx < -DEADZONE;
-                if (dy < -DEADZONE) player.jump();
-            }
-
-            canvas.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-
-                // Poza stanem 'playing' dotknięcie ekranu startuje/restartuje grę
-                // (ten sam efekt co Spacja - patrz game.js) zamiast zaczynać przeciągnięcie.
-                if (typeof gameState !== 'undefined' && gameState !== 'playing') {
-                    startGame();
-                    return;
-                }
-
-                const t = e.changedTouches[0];
-                startX = t.clientX;
-                startY = t.clientY;
-            }, { passive: false });
-
-            canvas.addEventListener('touchmove', (e) => {
-                if (startX === null) return;
-                e.preventDefault();
-                const t = e.changedTouches[0];
-                updateKeysFromDelta(t.clientX - startX, t.clientY - startY);
-            }, { passive: false });
-
-            const endTouch = (e) => {
-                if (startX === null) return;
-                e.preventDefault();
-                startX = null;
-                startY = null;
-                resetKeys();
-            };
-            canvas.addEventListener('touchend', endTouch);
-            canvas.addEventListener('touchcancel', endTouch);
-        })();
-
-        // Pokazuje/ukrywa panele pogody i statystyk (domyślnie schowane pod przyciskiem ⚙️)
-        function toggleUiPanels() {
-            document.querySelectorAll('.ui-panel').forEach(panel => {
-                panel.classList.toggle('hidden');
-            });
-        }
-
-        // Funkcje pomocnicze dla kontrolek
-        function updateSliderValue(type, value) {
-            const displays = {
-                'particles': 'particlesValue',
-                'wind': 'windValue',
-                'speed': 'speedValue',
-                'dayspeed': 'dayspeedValue'
-            };
-            
-            if (displays[type]) {
-                document.getElementById(displays[type]).textContent = 
-                    type === 'particles' ? value : parseFloat(value).toFixed(1);
-            }
-        }
-        
-        // Aktualizacja statystyk
-        function updateStats() {
-            const weatherNames = {
-                'rain': 'Deszcz 🌧️',
-                'snow': 'Śnieg ❄️', 
-                'leaves': 'Liście 🍃',
-                'none': 'Słońce ☀️'
-            };
-            
-            if (typeof particles !== 'undefined') {
-                document.getElementById('particleCount').textContent = particles.length;
-            }
-            
-            if (typeof weatherMode !== 'undefined') {
-                document.getElementById('currentWeather').textContent = weatherNames[weatherMode] || 'Nieznana';
-            }
-
-            if (typeof dayTime !== 'undefined') {
-                const phases = [
-                    [0.0, 0.15, 'Noc 🌙'], [0.15, 0.30, 'Świt 🌅'],
-                    [0.30, 0.70, 'Dzień ☀️'], [0.70, 0.85, 'Zmierzch 🌇'],
-                    [0.85, 1.0,  'Noc 🌙']
-                ];
-                const phase = phases.find(p => dayTime >= p[0] && dayTime < p[1]);
-                document.getElementById('timeOfDay').textContent = phase ? phase[2] : 'Noc 🌙';
-            }
-        }
-        
-        // Aktualizuj statystyki co sekundę
-        setInterval(updateStats, 1000);
-        
-        // Prosta animacja FPS counter
-        let fpsCounter = 0;
-        let lastFpsTime = Date.now();
-        
-        function updateFPS() {
-            fpsCounter++;
-            const now = Date.now();
-            if (now - lastFpsTime >= 1000) {
-                document.getElementById('fpsCounter').textContent = fpsCounter;
-                fpsCounter = 0;
-                lastFpsTime = now;
-            }
-            requestAnimationFrame(updateFPS);
-        }
-        updateFPS();
-        
-        // Powiadomienie o załadowaniu
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                console.log("🎮 Enhanced Parallax załadowany!");
-                console.log("🌦️ Kliknij przyciski pogody lub użyj klawiszy 1,2,3,0");
-            }, 1500);
-        });
-    </script>
+  backBtn.addEventListener('click', () => {
+    gameFrame.classList.remove('playing');
+    playHit.classList.remove('hidden');
+    backBtn.classList.remove('visible');
+    gameFrame.src = 'game-demo.html';
+  });
+</script>
 </body>
 </html>

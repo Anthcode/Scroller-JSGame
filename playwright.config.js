@@ -3,7 +3,9 @@
 // HTTP (`python3 -m http.server`, ten sam, którego README poleca do lokalnego uruchomienia)
 // i sterują stanem gry bezpośrednio przez globalny scope strony (window.gameState, window.player,
 // window.enemies, itd. - patrz tests/helpers.js), bo cała gra żyje w zwykłych zmiennych
-// globalnych ładowanych przez <script> w index.html, bez modułów.
+// globalnych ładowanych przez <script> w game-demo.html, bez modułów. index.html to tylko
+// wizualny ekran startowy, który osadza game-demo.html w iframe - silnik (i te globalne
+// zmienne) tam nie istnieje, więc testy celują bezpośrednio w game-demo.html.
 const fs = require('fs');
 const { defineConfig, devices } = require('@playwright/test');
 
@@ -38,7 +40,7 @@ module.exports = defineConfig({
 
     webServer: {
         command: `python3 -m http.server ${PORT}`,
-        url: `http://localhost:${PORT}/index.html`,
+        url: `http://localhost:${PORT}/game-demo.html`,
         reuseExistingServer: !process.env.CI,
         timeout: 10_000,
     },
