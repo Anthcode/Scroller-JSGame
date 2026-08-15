@@ -218,9 +218,9 @@
         
         <div class="control-group">
             <label>Prędkość gry:</label>
-            <input type="range" id="speedSlider" min="0.5" max="5" step="0.1" value="2"
+            <input type="range" id="speedSlider" min="0.5" max="5" step="0.1" value="1"
                    onchange="gamespeed = parseFloat(this.value); updateSliderValue('speed', this.value)">
-            <span class="value-display" id="speedValue">2.0</span>
+            <span class="value-display" id="speedValue">1.0</span>
         </div>
 
         <div class="control-group">
@@ -245,10 +245,14 @@
         <strong>⌨️ Klawisze:</strong> 1-Deszcz, 2-Śnieg, 3-Liście, 0-Słońce, T-Pauza cyklu
     </div>
 
-    <!-- System animacji sprite'ów i encje gry (kolejność ma znaczenie - klasy bazowe najpierw) -->
+    <!-- Kolejność ma znaczenie: core.js (canvas/stałe) najpierw, potem animator i klasy
+         encji, game.js (stan/wynik/HUD) przed bootstrapem, który je wszystkie spina. -->
+    <script src="core.js"></script>
     <script src="animatorController.js"></script>
+    <script src="world.js"></script>
     <script src="player.js"></script>
     <script src="enemy.js"></script>
+    <script src="game.js"></script>
     <script src="script.js"></script>
     
     <script>
@@ -279,6 +283,14 @@
 
             canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
+
+                // Poza stanem 'playing' dotknięcie ekranu startuje/restartuje grę
+                // (ten sam efekt co Spacja - patrz game.js) zamiast zaczynać przeciągnięcie.
+                if (typeof gameState !== 'undefined' && gameState !== 'playing') {
+                    startGame();
+                    return;
+                }
+
                 const t = e.changedTouches[0];
                 startX = t.clientX;
                 startY = t.clientY;

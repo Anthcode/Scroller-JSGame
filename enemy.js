@@ -21,20 +21,20 @@ const ENEMY_ANIM_DATA = {
 };
 
 class Enemy {
-    constructor(x, y, patrolRange = 150) {
+    constructor(x, y) {
         this.x = x;
         this.y = y;
         this.width = 76;
         this.height = 76;
-        this.speed = 1.2;
+        this.speed = 1.2; // dodatkowa prędkość własna wroga, ponad bazowe tempo świata (worldSpeed)
 
         this.hp = 2;
         this.alive = true;
 
-        // Patrol między [startX, startX + patrolRange] - wróg odbija się na krańcach
-        this.startX = x;
-        this.patrolRange = patrolRange;
-        this.direction = 1; // 1 = w prawo, -1 = w lewo (sterowanie flipem sprite'a)
+        // Wróg w tym endless runnerze zawsze płynie w lewo razem ze światem (patrz update()) -
+        // direction istnieje tylko dla draw(), który odbija sprite'a w poziomie zależnie
+        // od kierunku ruchu (utrwalone w PR #17: natywna klatka arkusza = ruch w lewo).
+        this.direction = -1;
 
         const sheets = ENEMY_ANIM_DATA.sheets.length > 0
             ? ENEMY_ANIM_DATA.sheets
@@ -63,28 +63,14 @@ class Enemy {
         }
     }
 
-    // `target` (opcjonalnie) - obiekt z x/width, do którego wróg ma dążyć (gracz).
-    // Gdy podany, wróg ignoruje patrol i po prostu goni gracza w poziomie;
-    // bez targetu zachowuje się jak wcześniej - patroluje między [startX, startX + patrolRange].
-    update(deltaTime, target = null) {
+    // worldSpeed - bazowe tempo świata z krzywej trudności (game.js), to samo, które widzi
+    // tło (Layers), więc wróg płynie z tym samym tempem co ziemia. enemySpeedBonus - dodatkowe
+    // wzmocnienie tempa wroga z tej samej krzywej (rośnie z czasem przeżycia).
+    update(deltaTime, worldSpeed, enemySpeedBonus = 0) {
         const controlsLocked = !this.alive || this.animator.states[this.animator.currentState].locked;
 
         if (!controlsLocked) {
-            if (target) {
-                const centerX = this.x + this.width / 2;
-                const targetCenterX = target.x + target.width / 2;
-                this.direction = targetCenterX < centerX ? -1 : 1;
-                this.x += this.speed * this.direction;
-            } else {
-                this.x += this.speed * this.direction;
-
-                if (this.x >= this.startX + this.patrolRange) {
-                    this.direction = -1;
-                } else if (this.x <= this.startX) {
-                    this.direction = 1;
-                }
-            }
-
+            this.x -= (worldSpeed + this.speed + enemySpeedBonus) * timeScale;
             this.animator.play('move');
         }
 
@@ -118,7 +104,15 @@ class Enemy {
         ctx.restore();
     }
 
+    // Wcięty hitbox, symetrycznie - klatki mają tylko ~3-4px przezroczystego marginesu,
+    // więc niewielkie, jednolite wcięcie wystarcza, żeby kolizje pasowały do sylwetki.
     getBounds() {
-        return { x: this.x, y: this.y, width: this.width, height: this.height };
+        const inset = 4;
+        return {
+            x: this.x + inset,
+            y: this.y + inset,
+            width: this.width - inset * 2,
+            height: this.height - inset * 2
+        };
     }
 }
