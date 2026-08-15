@@ -96,10 +96,10 @@ class Enemy {
         if (!frame.sheet) return;
 
         // Zamiast osobnych animacji "w lewo"/"w prawo" odbijamy tę samą klatkę w poziomie.
-        // Domyślna klatka w arkuszu patrzy w prawo, więc odbijamy dopiero przy ruchu w lewo.
+        // Domyślna klatka w arkuszu ma wyglądać jak ruch w lewo, więc odbijamy przy ruchu w prawo.
         ctx.save();
 
-        if (this.direction === -1) {
+        if (this.direction === 1) {
             ctx.translate(this.x + this.width, this.y);
             ctx.scale(-1, 1);
             ctx.drawImage(
