@@ -1,23 +1,24 @@
 // ==== GRACZ ====
-// images/player/character.png - pixel-artowy ninja wygenerowany modelem AI
-// (surowa grafika: tools/player_ai_source_raw.png, wycięta i ułożona w klatki
-// przez tools/extract_player_sheet_from_ai_source.py), 64x64px/klatkę, układ
-// wierszy dokładnie taki jak w `states` poniżej. Chcesz podmienić na własną
-// grafikę z LPC Sprite Generatora (https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/)?
-// Wystarczy podmienić ścieżkę niżej i dopasować `row` do układu wierszy w Twoim arkuszu.
+// images/player/character.png - złożony z oryginalnych assetów tej samej gry
+// (wcześniejszy deploy: https://parallax-fx.web.app/ - idlesheet.png,
+// runsheet.png, jump.png, die.png). Skrypt składający: tools/compose_player_sheet.py
+// (źródła w tools/player_source_assets/). Oryginał nie miał osobnej animacji
+// trafienia ani lustrzanego biegu w lewo - hit jest syntetyzowany (tint na
+// klatkach idle), a move-left to programowo odbite klatki runsheet.png.
+// 150x150px/klatkę, układ wierszy dokładnie taki jak w `states` poniżej.
 const PLAYER_ANIM_DATA = {
     sheets: [
         'images/player/character.png',
     ],
-    frameWidth: 64,
-    frameHeight: 64,
+    frameWidth: 150,
+    frameHeight: 150,
     states: {
-        idle:         { row: 0, frameCount: 1, frameInterval: 200, startFrame: 0, loop: true,  locked: false, next: null },
-        'move-left':  { row: 1, frameCount: 9, frameInterval: 80,  startFrame: 0, loop: true,  locked: false, next: null },
-        'move-right': { row: 2, frameCount: 9, frameInterval: 80,  startFrame: 0, loop: true,  locked: false, next: null },
-        jump:         { row: 3, frameCount: 6, frameInterval: 80,  startFrame: 0, loop: true,  locked: false, next: null },
-        hit:          { row: 4, frameCount: 6, frameInterval: 60,  startFrame: 0, loop: false, locked: true,  next: 'idle' },
-        death:        { row: 5, frameCount: 6, frameInterval: 120, startFrame: 0, loop: false, locked: true,  next: null }
+        idle:         { row: 0, frameCount: 10, frameInterval: 50, startFrame: 0, loop: true,  locked: false, next: null },
+        'move-left':  { row: 1, frameCount: 10, frameInterval: 50, startFrame: 0, loop: true,  locked: false, next: null },
+        'move-right': { row: 2, frameCount: 10, frameInterval: 50, startFrame: 0, loop: true,  locked: false, next: null },
+        jump:         { row: 3, frameCount: 10, frameInterval: 50, startFrame: 0, loop: true,  locked: false, next: null },
+        hit:          { row: 4, frameCount: 6,  frameInterval: 60, startFrame: 0, loop: false, locked: true,  next: 'idle' },
+        death:        { row: 5, frameCount: 10, frameInterval: 90, startFrame: 0, loop: false, locked: true,  next: null }
     },
     initialState: 'idle'
 };
@@ -26,8 +27,8 @@ class Player {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.width = 64;
-        this.height = 64;
+        this.width = 96;
+        this.height = 96;
         this.speed = 3;
         this.velocityX = 0;
         this.velocityY = 0;
@@ -58,7 +59,7 @@ class Player {
                 frameWidth: PLAYER_ANIM_DATA.frameWidth,
                 frameHeight: PLAYER_ANIM_DATA.frameHeight,
                 rows: 6,
-                cols: 9,
+                cols: 10,
                 color: '#4A90E2'
             })];
 
