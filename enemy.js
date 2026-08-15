@@ -95,10 +95,11 @@ class Enemy {
         const frame = this.animator.getCurrentFrame();
         if (!frame.sheet) return;
 
-        // Zamiast osobnych animacji "w lewo"/"w prawo" odbijamy tę samą klatkę w poziomie
+        // Zamiast osobnych animacji "w lewo"/"w prawo" odbijamy tę samą klatkę w poziomie.
+        // Domyślna klatka w arkuszu patrzy w lewo, więc odbijamy dopiero przy ruchu w prawo.
         ctx.save();
 
-        if (this.direction === -1) {
+        if (this.direction === 1) {
             ctx.translate(this.x + this.width, this.y);
             ctx.scale(-1, 1);
             ctx.drawImage(
