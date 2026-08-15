@@ -24,6 +24,30 @@
   #settingsBtn:hover { background: rgba(0,255,255,0.18); transform: rotate(35deg); }
   #settingsBtn div { width: 36%; aspect-ratio: 1; border-radius: 50%; border: 2px solid #00ffff; }
   @keyframes ctaPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+  /* W trakcie rozgrywki wracamy do pełnoekranowego canvasu (tak jak przed dodaniem
+     ekranu startowego z ramką) zamiast trzymać grę w małym wyciętym oknie - #gameFrame
+     wychodzi z pozycjonowania względem .card i pokrywa cały viewport, NAD grafiką ramki
+     (frame-art się chowa). #backBtn przechodzi na pozycjonowanie względem viewportu,
+     żeby nie został uwięziony w wąskim pasku .card na szerokich ekranach. */
+  .card.playing .frame-art,
+  .card.playing #settingsBtn {
+    display: none;
+  }
+  .card.playing #gameFrame {
+    position: fixed;
+    inset: 0;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 3;
+  }
+  .card.playing #backBtn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+  }
 </style>
 </head>
 <body>
@@ -37,11 +61,13 @@
   </div>
 </div>
 <script>
+  const card = document.querySelector('.card');
   const gameFrame = document.getElementById('gameFrame');
   const playHit = document.getElementById('playHit');
   const backBtn = document.getElementById('backBtn');
 
   playHit.addEventListener('click', () => {
+    card.classList.add('playing');
     gameFrame.classList.add('playing');
     playHit.classList.add('hidden');
     backBtn.classList.add('visible');
@@ -51,6 +77,7 @@
   });
 
   backBtn.addEventListener('click', () => {
+    card.classList.remove('playing');
     gameFrame.classList.remove('playing');
     playHit.classList.remove('hidden');
     backBtn.classList.remove('visible');
