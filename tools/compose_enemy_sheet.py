@@ -39,10 +39,12 @@ def load_frames():
     return frames
 
 
-def fit_into_cell(char_img):
+def fit_into_cell(char_img, target=FRAME - 6):
+    """target = maksymalny rozmiar postaci wewnątrz komórki FRAMExFRAME (reszta
+    to margines). Dla death używamy mniejszego target, żeby przy obrocie kolce
+    głowy nie wyjeżdżały poza kadr (patrz max_target_for_rotation)."""
     cw, ch = char_img.size
-    margin = 6
-    scale = min((FRAME - margin) / cw, (FRAME - margin) / ch)
+    scale = min(target / cw, target / ch)
     new_w = max(1, round(cw * scale))
     new_h = max(1, round(ch * scale))
     resized = char_img.resize((new_w, new_h), Image.LANCZOS)
@@ -51,6 +53,20 @@ def fit_into_cell(char_img):
     py = FRAME - 3 - new_h
     cell.paste(resized, (px, py), resized)
     return cell
+
+
+def max_target_for_rotation(max_angle_deg, pivot_margin_from_bottom=12, edge_margin=3):
+    """Największy bezpieczny rozmiar postaci (fit_into_cell target), przy którym
+    obrót o max_angle_deg wokół pivotu (blisko dołu komórki) nie wychodzi poza
+    krawędzie FRAMExFRAME. Odległość czubka głowy od pivotu (d) po obrocie ma
+    składową poziomą d*sin(kąt) - to ona ogranicza, bo pivot jest blisko
+    poziomego środka, a mało miejsca po bokach."""
+    import math
+    pivot_y = FRAME - pivot_margin_from_bottom
+    half_width_available = FRAME / 2 - edge_margin
+    d_max = half_width_available / math.sin(math.radians(max_angle_deg))
+    # d = wysokość_postaci - (odległość dołu postaci od pivotu, tu ~9px z marginesu)
+    return max(20, round(d_max + 9))
 
 
 def tint_red(img, strength=0.5):
@@ -70,12 +86,16 @@ def main():
 
     hit_frames = [tint_red(cells[0]) if i % 2 == 0 else cells[0] for i in range(4)]
 
+    MAX_DEATH_ANGLE = 60
+    death_target = max_target_for_rotation(MAX_DEATH_ANGLE)
+    death_base = fit_into_cell(raw_frames[1], target=death_target)
+
     death_frames = []
     for i in range(6):
-        angle = min(60, i * 12)
+        angle = min(MAX_DEATH_ANGLE, i * 12)
         alpha = 255 if i < 5 else 150
-        frame = cells[1].rotate(-angle, resample=Image.NEAREST, expand=False,
-                                 center=(FRAME // 2, FRAME - 12))
+        frame = death_base.rotate(-angle, resample=Image.BICUBIC, expand=False,
+                                   center=(FRAME // 2, FRAME - 12))
         if alpha < 255:
             r, g, b, a = frame.split()
             a = a.point(lambda v: v * alpha // 255)
