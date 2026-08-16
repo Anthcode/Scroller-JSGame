@@ -88,10 +88,16 @@ function handlePlayerEnemyCollisions() {
         const enemyBounds = enemy.getBounds();
         if (!checkCollision(playerBounds, enemyBounds)) continue;
 
-        // Stomp: gracz opada (velocityY > 0) i w tej klatce przeciął stopami górę wroga
-        // "od góry" (stopy klatkę temu były wyżej niż głowa wroga jest teraz) - a nie
-        // po prostu w niego wszedł z boku. prevBottom jest odporniejsze na tunelowanie
-        // niż próg odległości, bo świat i wróg mogą poruszać się kilka-kilkanaście px/klatkę.
+        // Stomp: gracz opada (velocityY > 0) i albo (a) w tej klatce przeciął stopami górę
+        // wroga "od góry" (stopy klatkę temu były wyżej niż głowa wroga jest teraz - prevBottom
+        // <= enemyTop), albo (b) w chwili kolizji stopy są nadal w górnej połowie ciała wroga.
+        // (a) sam w sobie okazał się zbyt kruchy w prawdziwej rozgrywce - wymaga złapania
+        // DOKŁADNIE klatki przejścia, a przy realnym (nie w pełni deterministycznym) tempie
+        // klatek i niepikselowo-idealnym skoku gracz często zaczyna nakładać się na wroga o
+        // klatkę/piksele PO tym, jak prevBottom zdążyło już zejść poniżej głowy wroga - mimo że
+        // wizualnie i tak ląduje na nim od góry. (b) łata to bez otwierania furtki dla trafień
+        // z boku: przy zwykłym wejściu w bok wroga stopy gracza są w jego dolnej połowie/na
+        // wysokości gruntu, nie w górnej, więc taki kontakt nadal poprawnie liczy się jako hit.
         //
         // Latający wróg (ghost, enemy.js) hover-uje nad zasięgiem stojącego gracza - dotknąć
         // go można WYŁĄCZNIE skacząc, więc każdy kontakt z nim jest już świadomie wymierzonym
@@ -101,7 +107,11 @@ function handlePlayerEnemyCollisions() {
         // trafienie, zwłaszcza na dotyku. Stąd isHoverKill zwalnia latające typy z tego
         // wymogu; naziemne (walker/walkerFast) zachowują pełną logikę stomp-vs-hit.
         const isHoverKill = !!enemy.config.hover;
-        const isStomp = isHoverKill || (player.velocityY > 0 && player.prevBottom <= enemyBounds.y);
+        const feetY = playerBounds.y + playerBounds.height;
+        const isStomp = isHoverKill || (
+            player.velocityY > 0 &&
+            (player.prevBottom <= enemyBounds.y || feetY <= enemyBounds.y + enemyBounds.height / 2)
+        );
 
         if (isStomp) {
             enemy.takeHit(enemy.hp); // jeden stomp = zgon, niezależnie od aktualnego hp wroga
