@@ -1,14 +1,17 @@
 // ==== POMOCNIKI TESTOWE ====
 // Gra trzyma cały stan w globalnym scope strony (zwykłe <script>, bez modułów - patrz
-// index.html), więc testy sterują nim wprost przez page.evaluate(). Realna pętla gry
+// game-demo.html), więc testy sterują nim wprost przez page.evaluate(). Realna pętla gry
 // (anime() w script.js) startuje automatycznie po załadowaniu strony i działa cały czas w tle
 // przez requestAnimationFrame - synchroniczne bloki page.evaluate() (np. runFrames poniżej)
 // nie są przez nią przerywane w trakcie wykonywania (JS w stronie jest jednowątkowy), więc dają
 // deterministyczne, powtarzalne kroki fizyki niezależne od prawdziwego taktu rAF.
+//
+// index.html to wizualny ekran startowy (grafika ramki + osadzony w iframe game-demo.html) -
+// silnik gry i jego zmienne globalne żyją w game-demo.html, więc testy nawigują tam wprost.
 
 // Otwiera grę i czeka aż wystartuje stan 'menu' (czyli core.js/game.js/script.js się wykonały).
 async function gotoGame(page) {
-    await page.goto('/index.html');
+    await page.goto('/game-demo.html');
     await page.waitForFunction(() => typeof gameState !== 'undefined' && gameState === 'menu');
 }
 
