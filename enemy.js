@@ -65,13 +65,23 @@ const ENEMY_TYPES = {
     ghost: {
         animData: {
             sheets: ['images/enemy/ghost.png'],
-            frameWidth: 120,
-            frameHeight: 120,
+            // Arkusz ma realnie 2087x754px, wciąż logicznie 11 kolumn x 4 wiersze (jak
+            // poprzedni asset), ale komórka NIE jest kwadratowa 120x120 - to była siatka
+            // starego pliku (1320x480, PR #20). Zmierzone bezpośrednio (analiza pikseli):
+            // pitch kolumny 2087/11 ≈ 189.7px, pitch wiersza 754/4 = 188.5px dokładnie.
+            // Stary rozmiar 120x120 krojony na tym pliku "rozjeżdżał się" z każdą kolejną
+            // klatką (sx = frame*120 uciekał coraz głębiej w złą komórkę) - canvas
+            // drawImage akceptuje niecałkowite sWidth/sHeight bez problemu.
+            frameWidth: 2087 / 11,
+            frameHeight: 754 / 4,
             states: {
                 idle:  { row: 0, frameCount: 1,  frameInterval: 200, startFrame: 0, loop: true,  locked: false, next: null },
                 move:  { row: 1, frameCount: 11, frameInterval: 90,  startFrame: 0, loop: true,  locked: false, next: null },
                 hit:   { row: 2, frameCount: 4,  frameInterval: 70,  startFrame: 0, loop: false, locked: true,  next: 'idle' },
-                death: { row: 3, frameCount: 6,  frameInterval: 110, startFrame: 0, loop: false, locked: true,  next: null }
+                // Wiersz 4 (śmierć) ma w assecie tylko 4 realne klatki (biała -> szara ->
+                // ciemnoszara -> czarna), nie 6 jak zakładała stara konfiguracja - klatki
+                // 4-5 były puste/niewidoczne.
+                death: { row: 3, frameCount: 4,  frameInterval: 110, startFrame: 0, loop: false, locked: true,  next: null }
             },
             initialState: 'idle'
         },
