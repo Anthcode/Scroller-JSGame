@@ -122,7 +122,18 @@ function handlePlayerEnemyCollisions() {
             // Wartość zależna od typu wroga (ENEMY_TYPES w enemy.js) - trudniejsze warianty
             // (szybszy walkerFast, latający ghost wymagający dobrze wymierzonego skoku) dają
             // więcej punktów niż podstawowy walker.
-            score += (enemy.config.scoreValue || STOMP_SCORE_BASE) * combo;
+            const stompScore = (enemy.config.scoreValue || STOMP_SCORE_BASE) * combo;
+            score += stompScore;
+
+            // Game feel (feel.js): hit-stop/shake/iskry/floating text/dźwięk - czysto
+            // kosmetyczne, nie wpływają na wynik ani na wykrywanie kolizji.
+            const cx = enemyBounds.x + enemyBounds.width / 2;
+            const cy = enemyBounds.y + enemyBounds.height / 2;
+            triggerHitStop(Math.min(90, 60 + combo * 5));
+            addShakeTrauma(0.15 + Math.min(0.25, combo * 0.03));
+            spawnImpactBurst(cx, cy, enemy.config.tint || enemy.config.placeholderColor, 8 + Math.min(4, combo));
+            spawnComboText(cx, enemyBounds.y, `+${Math.floor(stompScore)}${combo > 1 ? ` x${combo}` : ''}`, 1 + Math.min(0.6, combo * 0.1));
+            playStompSound(combo);
         } else {
             player.takeHit(1);
             break; // trafienie z boku/od dołu - jedno wystarczy na klatkę
@@ -200,6 +211,7 @@ function updateDemo(deltaTime) {
 // sensu. Pełna lista resetowanych rzeczy: gracz (pozycja/hp/prędkości/animator - przez
 // Player.reset()), wrogowie, timery spawnera, wynik/combo/czas, tempo świata, stan gry.
 function startGame() {
+    ensureAudio(); // dopiero teraz mamy gwarantowaną interakcję użytkownika (polityka autoplay)
     player.reset();
 
     enemies.length = 0; // enemies jest const - czyścimy zawartość, nie podmieniamy referencji
@@ -225,6 +237,13 @@ function enterGameOver() {
 // ==== GŁÓWNA AKTUALIZACJA ROZGRYWKI (wywoływana ze script.js:anime()) ====
 function updateGame(deltaTime) {
     if (gameState === 'playing') {
+        // Hit-stop (feel.js): zamraża fizykę/logikę tej klatki bez zamrażania rysowania -
+        // anime() (script.js) leci dalej normalnie, żeby shake/iskry/dźwięk nie ucierpiały.
+        if (hitStopMs > 0) {
+            hitStopMs = Math.max(0, hitStopMs - deltaTime);
+            return;
+        }
+
         elapsedMs += deltaTime;
         const difficulty = getDifficulty(elapsedMs);
         worldSpeed = difficulty.worldSpeed;

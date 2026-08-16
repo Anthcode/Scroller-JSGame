@@ -108,6 +108,7 @@ class Player {
         if (this.isJumping) return;
         this.isJumping = true;
         this.velocityY = this.jumpStrength;
+        playJumpBlip();
     }
 
     // Zadaje graczowi obrażenia i przełącza animację na 'hit' (lub 'death' przy 0 hp)
@@ -124,6 +125,9 @@ class Player {
             this.animator.play('hit', { force: true });
             this.invulnerable = true;
             this.invulnerableTimer = 0;
+            triggerHitStop(140);
+            addShakeTrauma(0.5);
+            playHitNoise();
         }
     }
 

@@ -13,7 +13,15 @@ function anime(timestamp = 0) {
   lastTimestamp = timestamp;
   updateTimeScale(deltaTime);
 
+  // Game feel (feel.js): odliczane co REALNĄ klatkę, niezależnie od hit-stopu (który
+  // zamraża tylko fizykę w updateGame()) - inaczej shake/iskry/tekst zamarłyby razem z nią.
+  updateFeelSystems(deltaTime);
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const shakeOffset = getShakeOffset();
+  ctx.save();
+  ctx.translate(shakeOffset.x, shakeOffset.y);
 
   layer11.update();
   layer11.draw();
@@ -57,6 +65,12 @@ function anime(timestamp = 0) {
     enemies.forEach(enemy => enemy.draw(ctx));
     player.draw(ctx);
   }
+
+  // Iskry uderzenia trzęsą się razem ze światem (wewnątrz translacji shake'u), floating
+  // combo text zostaje poza nią - ma być czytelny, nie ma sensu żeby liczby drgały losowo.
+  drawImpactParticles(ctx);
+  ctx.restore();
+  drawFloatingTexts(ctx);
 
   drawHud();
 
