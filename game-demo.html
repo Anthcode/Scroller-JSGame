@@ -27,14 +27,22 @@
        canvasie - inaczej przeglądarka próbuje scrollować stronę. */
     touch-action: none;
   }
-  /* Osadzone w oknie ekranu startowego (index.html, przez #gameFrame) - zarówno w trybie
-     menu/demo, JAK I w trakcie prawdziwej rozgrywki (patrz zmiana: gra zostaje w wyciętym
-     oknie ramki zamiast przechodzić na pełny ekran). Wycięcie w grafice ramki ma inne
-     proporcje niż canvas (800x600, patrz core.js), więc "contain" zostawiał puste pasy po
-     bokach zamiast wypełniać całą dziurę - skalujemy więc po szerokości ("cover"); nadmiar
-     wysokości chowa się pod nieprzezroczystą grafiką ramki poza wycięciem, dokładnie tak
-     samo dla demo i dla realnej gry, żeby przejście między nimi nie skakało rozmiarem. */
-  html.embedded canvas {
+  /* Osadzone w małym oknie ekranu startowego (index.html, przez #gameFrame) - menu/demo
+     zawsze, a na desktopie (gdzie okno wycięcia w ramce zostaje takie samo w trakcie gry -
+     patrz #gameFrame.playing w index.html) także prawdziwa rozgrywka. Wycięcie w grafice
+     ramki ma inne proporcje niż canvas (800x600, patrz core.js), więc "contain" zostawiał
+     puste pasy po bokach zamiast wypełniać całą dziurę - skalujemy więc po szerokości
+     ("cover"); nadmiar wysokości chowa się pod nieprzezroczystą grafiką ramki poza
+     wycięciem. html.fullscreen (ustawiane przez index.html w momencie startGame() - TYLKO
+     gdy window.matchMedia w index.html rozpozna urządzenie jako mobile, patrz komentarz
+     tam) wraca do pełnego "contain", bo wtedy #gameFrame przestaje być małym wyciętym oknem
+     i staje się całym viewportem - "cover po szerokości" na wysokim, pionowym ekranie
+     zostawiłby ledwie wąski pasek gry z pustką góra/dół zamiast realnie większej sceny.
+     UWAGA: decyzja mobile/desktop MUSI zapadać w index.html (prawdziwy viewport przeglądarki),
+     nie tutaj przez osobną media query - #gameFrame to małe okno (nawet na szerokim
+     desktopie), więc jego WEWNĘTRZNY viewport nigdy nie osiągnąłby progu 1024px i taka media
+     query nigdy by się tu nie uruchomiła. */
+  html.embedded:not(.fullscreen) canvas {
     width: 100%;
     height: auto;
     max-width: none;

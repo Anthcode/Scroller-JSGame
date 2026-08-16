@@ -12,7 +12,30 @@
   .stage { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
   .card { position: relative; height: min(100vh, 177.8vw); aspect-ratio: 853 / 1844; max-width: 100vw; }
   #gameFrame { position: absolute; left: 12.9%; top: 25.8%; width: 74.3%; height: 40.3%; border: none; z-index: 1; pointer-events: none; }
-  #gameFrame.playing { pointer-events: auto; }
+  /* Okno gry (#gameFrame) na mobile jest ograniczone do przezroczystego wycięcia w grafice
+     ramki (~74%x40% karty) - w praktyce małe okno grania na telefonie. W trakcie REALNEJ
+     rozgrywki (nie w menu/demo) porzucamy więc ramkę i rozciągamy #gameFrame na cały viewport
+     (position:fixed, sibling ~ chowa resztę dekoracji karty) - dokładnie jak przed dodaniem
+     strony startowej. Na desktopie (patrz media query niżej) ta zmiana jest wyłączona, bo tam
+     wycięcie w ramce jest już wystarczająco duże (~62%x57%), a spójność z ekranem menu ma
+     większą wartość niż dodatkowe piksele. */
+  #gameFrame.playing {
+    pointer-events: auto;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 3;
+  }
+  #gameFrame.playing ~ .frame-art,
+  #gameFrame.playing ~ #settingsBtn {
+    display: none;
+  }
+  #gameFrame.playing ~ #backBtn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+  }
   .frame-art { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; image-rendering: pixelated; }
   #playHit { position: absolute; left: 11.9%; top: 77.5%; width: 75.9%; height: 9%; z-index: 3; cursor: pointer; animation: ctaPulse 2.2s ease-in-out infinite; }
   #playHit:hover { animation: none; filter: brightness(1.15); }
@@ -59,6 +82,27 @@
     #settingsBtn {
       display: none;
     }
+    /* Fullscreen-w-trakcie-gry (wyżej) jest zamierzony wyłącznie dla mobile - tu wycięcie w
+       ramce jest już wystarczająco duże, a zeskakiwanie do pełnego ekranu psułoby spójność
+       z ekranem menu bez realnej korzyści. Te same selektory, wyżej w kaskadzie (media query
+       ładuje się później w pliku), więc wygrywają przy równej specyficzności. */
+    #gameFrame.playing {
+      position: absolute;
+      inset: auto;
+      left: 18.9%;
+      top: 21.25%;
+      width: 62.26%;
+      height: 56.96%;
+      z-index: 1;
+    }
+    #gameFrame.playing ~ .frame-art {
+      display: block;
+    }
+    #gameFrame.playing ~ #backBtn {
+      position: absolute;
+      top: 2%;
+      left: 5%;
+    }
   }
 </style>
 </head>
@@ -77,6 +121,13 @@
   const playHit = document.getElementById('playHit');
   const backBtn = document.getElementById('backBtn');
 
+  // Ten sam breakpoint co CSS "@media (min-width: 1024px) and (orientation: landscape)"
+  // wyżej (desktop = ramka zostaje taka sama w trakcie gry, #gameFrame.playing nic nie
+  // zmienia) - sprawdzany tu jawnie w JS na PRAWDZIWYM viewporcie strony, bo iframe wewnątrz
+  // #gameFrame jest małym oknem nawet na szerokim desktopie i jego własna media query nigdy
+  // nie zobaczyłaby >=1024px.
+  const isDesktopFramed = () => window.matchMedia('(min-width: 1024px) and (orientation: landscape)').matches;
+
   playHit.addEventListener('click', () => {
     gameFrame.classList.add('playing');
     playHit.classList.add('hidden');
@@ -88,6 +139,18 @@
       // nadrzędnym, więc bez jawnego focus() klawiatura zostaje "przypięta" do strony
       // startowej i żaden klawisz nigdy nie dociera do gry (gracz stoi w miejscu).
       gameFrame.focus();
+      // Sygnał do CSS wewnątrz iframe'a (html.fullscreen w game-demo.html), żeby canvas
+      // wrócił do pełnego "contain" na czas prawdziwej gry - w małym oknie menu skaluje się
+      // "po szerokości" i przycina nadmiar wysokości, co przy #gameFrame.playing rozciągniętym
+      // na cały viewport (mobile, patrz CSS wyżej) zostawiłoby tylko wąski pasek gry.
+      // isDesktopFramed (ten sam breakpoint co #gameFrame.playing w desktopowej media query
+      // wyżej) MUSI być sprawdzony tutaj, względem PRAWDZIWEGO viewportu przeglądarki -
+      // #gameFrame to małe okno nawet na szerokim desktopie, więc odpowiadająca media query
+      // WEWNĄTRZ iframe'a (game-demo.html) nigdy by nie zobaczyła szerokości >=1024px i nie
+      // dałoby się tam odróżnić trybów bez zdublowania tej decyzji na podstawie złego viewportu.
+      if (!isDesktopFramed()) {
+        try { gameFrame.contentDocument.documentElement.classList.add('fullscreen'); } catch (e) {}
+      }
     }, 50);
   });
 
