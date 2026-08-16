@@ -170,6 +170,39 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
+  /* Widoczny tylko na ekranie game over (game.js:updateSeedOverlay) - pokazuje seed
+     spawnera tego biegu (core.js), żeby dało się skopiować i podzielić dokładnie tym
+     samym układem wrogów (?seed=... w URL, patrz core.js:initGameRNG). */
+  .seed-overlay {
+    position: absolute;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.75);
+    padding: 10px 16px;
+    border-radius: 10px;
+    color: #ffd54a;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    text-align: center;
+    z-index: 999;
+  }
+
+  .seed-overlay.hidden {
+    display: none;
+  }
+
+  .seed-overlay button {
+    margin-left: 8px;
+    padding: 4px 10px;
+    border: none;
+    border-radius: 6px;
+    background: #00ffff;
+    color: #002233;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
   /* Panele pogody/statystyk są domyślnie ukryte - pokazuje je przycisk toggle */
   .ui-panel.hidden {
     display: none;
@@ -274,6 +307,12 @@
   <strong>⌨️ Klawisze:</strong> 1-Deszcz, 2-Śnieg, 3-Liście, 0-Słońce, T-Pauza cyklu
 </div>
 
+<!-- Seed biegu (widoczny tylko na ekranie game over) -->
+<div class="seed-overlay hidden" id="seedOverlay">
+  Seed: <span id="seedValue"></span>
+  <button onclick="copySeedToClipboard()">Kopiuj seed</button>
+</div>
+
 <!-- Kolejność ma znaczenie: core.js (canvas/stałe) najpierw, potem animator i klasy
      encji, game.js (stan/wynik/HUD) przed bootstrapem, który je wszystkie spina. -->
 <script src="core.js"></script>
@@ -282,6 +321,7 @@
 <script src="world.js"></script>
 <script src="player.js"></script>
 <script src="enemy.js"></script>
+<script src="ghost.js"></script>
 <script src="game.js"></script>
 <script src="script.js"></script>
 

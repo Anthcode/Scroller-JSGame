@@ -16,6 +16,52 @@ const MENU_WORLD_SPEED = 4; // tempo tła poza rozgrywką (menu/game over), żeb
 const BEST_SCORE_KEY = 'parallaxfx.bestScore';
 let bestScore = Number(safeStorageGet(BEST_SCORE_KEY, 0)) || 0;
 
+// ==== GHOST REKORDU ====
+// Nagrywa pozycję gracza co GHOST_SAMPLE_INTERVAL_MS podczas rozgrywki (delta-encoded,
+// zaokrąglone do px, zmieszczone w int8) i zapisuje bufor obok nowego rekordu wyniku - kolejny
+// bieg odtwarza go jako półprzezroczystą sylwetkę (ghost.js). Seed (core.js) zapisywany razem
+// z ghostem pod osobnym kluczem, żeby dało się skopiować układ wrogów z tego konkretnego biegu.
+const BEST_GHOST_KEY = 'parallaxfx.bestRunGhost';
+const BEST_SEED_KEY = 'parallaxfx.bestRunSeed';
+const GHOST_SAMPLE_INTERVAL_MS = 50;
+
+let currentRunGhost = []; // płaska tablica [dx,dy,flags, dx,dy,flags, ...] tej rozgrywki
+let ghostRecordTimer = 0;
+let ghostLastX = 0;
+let ghostLastY = 0;
+
+let playbackGhost = null; // {x0,y0,intervalMs,samples} wczytany z localStorage na start rundy
+
+function recordGhostSample() {
+    const dx = Math.max(-127, Math.min(127, Math.round(player.x - ghostLastX)));
+    const dy = Math.max(-127, Math.min(127, Math.round(player.y - ghostLastY)));
+    ghostLastX += dx;
+    ghostLastY += dy;
+    const flags = (player.facing === 'left' ? 1 : 0) | (player.isJumping ? 2 : 0) | (player.alive ? 4 : 0);
+    currentRunGhost.push(dx, dy, flags);
+}
+
+function loadBestGhost() {
+    const raw = safeStorageGet(BEST_GHOST_KEY, null);
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        return (parsed && Array.isArray(parsed.samples)) ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+function saveBestGhostIfRecord() {
+    safeStorageSet(BEST_GHOST_KEY, JSON.stringify({
+        x0: player.spawnX,
+        y0: player.spawnY,
+        intervalMs: GHOST_SAMPLE_INTERVAL_MS,
+        samples: currentRunGhost
+    }));
+    safeStorageSet(BEST_SEED_KEY, String(currentSeed));
+}
+
 // Krzywa trudności jako jedna czytelna funkcja czasu (ms od startu rozgrywki), żeby nie
 // rozrzucać magicznych liczb po spawnerze/wrogu/tle. Pełna trudność po 2 minutach przeżycia.
 function getDifficulty(elapsed) {
@@ -223,6 +269,14 @@ function startGame() {
     elapsedMs = 0;
     worldSpeed = getDifficulty(0).worldSpeed;
 
+    currentRunGhost = [];
+    ghostRecordTimer = 0;
+    ghostLastX = player.spawnX;
+    ghostLastY = player.spawnY;
+    playbackGhost = loadBestGhost();
+    initGhostEntity();
+    resetGhostPlayback();
+
     gameState = 'playing';
 }
 
@@ -231,6 +285,7 @@ function enterGameOver() {
     if (score > bestScore) {
         bestScore = score;
         safeStorageSet(BEST_SCORE_KEY, String(Math.floor(bestScore)));
+        saveBestGhostIfRecord();
     }
 }
 
@@ -251,6 +306,15 @@ function updateGame(deltaTime) {
         updateEnemySpawner(deltaTime, difficulty);
         enemies.forEach(enemy => enemy.update(deltaTime, difficulty.worldSpeed, difficulty.enemyBonus));
         player.update(deltaTime, { left: 0, right: canvas.width, top: 0, bottom: canvas.height });
+
+        // Ghost rekordu (ghost.js): nagrywamy bieżący bieg co GHOST_SAMPLE_INTERVAL_MS i
+        // jednocześnie odtwarzamy poprzedni najlepszy (jeśli jest) - oba dzielą elapsedMs.
+        ghostRecordTimer += deltaTime;
+        if (ghostRecordTimer >= GHOST_SAMPLE_INTERVAL_MS) {
+            ghostRecordTimer = 0;
+            recordGhostSample();
+        }
+        updateGhostPlayback(deltaTime);
 
         // Seria stompów (combo) kończy się, gdy gracz wraca na ziemię - sprawdzane PRZED
         // kolizjami tej klatki, żeby świeżo odbity stomp od razu zbudował nowe combo.
@@ -368,6 +432,26 @@ function drawOverlay(title, hint, badge) {
 // Rysuje HUD (wynik/rekord/combo/serduszka HP) i ewentualny ekran menu/game over.
 // Górne rogi canvasu są zajęte przez panel ⚙️ i statystyki (game-demo.html), więc wynik
 // idzie na środek góry, a HP w prawy dolny róg (dawniej tekst "HP: n / m").
+// Pokazuje/ukrywa nakładkę z seedem spawnera (DOM, nie canvas - trzeba dać graczowi
+// skopiować tekst) - widoczna tylko na ekranie game over, sterowana z drawHud() poniżej.
+function updateSeedOverlay() {
+    const overlay = document.getElementById('seedOverlay');
+    if (!overlay) return;
+
+    if (gameState === 'gameover') {
+        document.getElementById('seedValue').textContent = currentSeed;
+        overlay.classList.remove('hidden');
+    } else {
+        overlay.classList.add('hidden');
+    }
+}
+
+function copySeedToClipboard() {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(String(currentSeed)).catch(() => {});
+    }
+}
+
 function drawHud() {
     ctx.save();
     ctx.textAlign = 'center';
@@ -398,6 +482,8 @@ function drawHud() {
         const isNewBest = score > 0 && score >= bestScore;
         drawOverlay('GAME OVER', 'Spacja / dotknij ekranu, aby zagrać ponownie', isNewBest ? 'NOWY REKORD!' : null);
     }
+
+    updateSeedOverlay();
 
     ctx.restore();
 }

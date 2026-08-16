@@ -63,6 +63,7 @@ function anime(timestamp = 0) {
     demoPlayer.draw(ctx);
   } else {
     enemies.forEach(enemy => enemy.draw(ctx));
+    drawGhost(ctx); // duch (ghost.js) pod prawdziwym graczem, żeby nie zasłaniał aktualnego biegu
     player.draw(ctx);
   }
 
