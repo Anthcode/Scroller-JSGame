@@ -79,7 +79,7 @@ To statyczna strona bez buildu - wystarczy dowolny serwer HTTP:
 python3 -m http.server 8000
 ```
 
-i otwórz `http://localhost:8000/index.html` (ekran startowy). Żeby otworzyć sam silnik gry pełnoekranowo, z odsłoniętym panelem pogody/statystyk, wejdź na `http://localhost:8000/game-demo.html`.
+i otwórz `http://localhost:8000/index.html`.
 
 ## Testy
 
