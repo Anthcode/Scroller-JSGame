@@ -31,6 +31,10 @@ async function runFrames(page, count = 1, deltaTime = 1000 / 60) {
     await page.evaluate(({ count, deltaTime }) => {
         for (let i = 0; i < count; i++) {
             window.timeScale = 1;
+            // Hit-stop (feel.js) zamraża fizykę tej klatki gdy hitStopMs > 0 - testy sterujące
+            // klatkami ręcznie oczekują że KAŻDE wywołanie faktycznie przesuwa symulację,
+            // więc wymuszamy zero tak samo jak timeScale, zamiast dodawać tryb testowy do kodu produkcyjnego.
+            window.hitStopMs = 0;
             window.updateGame(deltaTime);
         }
     }, { count, deltaTime });

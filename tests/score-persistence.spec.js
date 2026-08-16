@@ -7,6 +7,9 @@ test.describe('Rekord (localStorage)', () => {
     test('nowy wynik wyzszy od rekordu jest zapisywany i przezywa reload', async ({ page }) => {
         await gotoGame(page);
         await startGame(page);
+        // WorldDirector (world.js) potrafi podnosic mnoznik wyniku do x1.8 (noc+wiatr) - pinujemy
+        // neutralne warunki, zeby test mierzyl zapis rekordu, nie zbieg okolicznosci pogodowych.
+        await page.evaluate(() => { weatherMode = 'none'; dayTime = 0.5; windForce = 1; });
 
         await page.evaluate(() => { score = 999999; });
         await page.evaluate(() => {
@@ -41,6 +44,7 @@ test.describe('Rekord (localStorage)', () => {
         expect(await page.evaluate(() => bestScore)).toBe(500);
 
         await startGame(page);
+        await page.evaluate(() => { weatherMode = 'none'; dayTime = 0.5; windForce = 1; });
         await page.evaluate(() => { score = 10; });
         await page.evaluate(() => {
             player.hp = 0;

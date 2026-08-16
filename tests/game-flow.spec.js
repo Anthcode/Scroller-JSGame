@@ -19,6 +19,9 @@ test.describe('Stan gry', () => {
         await gotoGame(page);
         await page.keyboard.press('Space');
         await page.waitForFunction(() => gameState === 'playing');
+        // WorldDirector (world.js) potrafi podnosic mnoznik wyniku do x1.8 (noc+wiatr) - pinujemy
+        // neutralne warunki, zeby "score < 10" mierzylo swiezosc stanu, nie zbieg pogodowy.
+        await page.evaluate(() => { weatherMode = 'none'; dayTime = 0.5; windForce = 1; });
 
         const state = await page.evaluate(() => ({
             hp: player.hp,
@@ -79,6 +82,7 @@ test.describe('Stan gry', () => {
         });
 
         await page.evaluate(() => window.startGame());
+        await page.evaluate(() => { weatherMode = 'none'; dayTime = 0.5; windForce = 1; });
 
         const state = await page.evaluate(() => ({
             gameState, score, combo,

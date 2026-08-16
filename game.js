@@ -16,6 +16,52 @@ const MENU_WORLD_SPEED = 4; // tempo tła poza rozgrywką (menu/game over), żeb
 const BEST_SCORE_KEY = 'parallaxfx.bestScore';
 let bestScore = Number(safeStorageGet(BEST_SCORE_KEY, 0)) || 0;
 
+// ==== GHOST REKORDU ====
+// Nagrywa pozycję gracza co GHOST_SAMPLE_INTERVAL_MS podczas rozgrywki (delta-encoded,
+// zaokrąglone do px, zmieszczone w int8) i zapisuje bufor obok nowego rekordu wyniku - kolejny
+// bieg odtwarza go jako półprzezroczystą sylwetkę (ghost.js). Seed (core.js) zapisywany razem
+// z ghostem pod osobnym kluczem, żeby dało się skopiować układ wrogów z tego konkretnego biegu.
+const BEST_GHOST_KEY = 'parallaxfx.bestRunGhost';
+const BEST_SEED_KEY = 'parallaxfx.bestRunSeed';
+const GHOST_SAMPLE_INTERVAL_MS = 50;
+
+let currentRunGhost = []; // płaska tablica [dx,dy,flags, dx,dy,flags, ...] tej rozgrywki
+let ghostRecordTimer = 0;
+let ghostLastX = 0;
+let ghostLastY = 0;
+
+let playbackGhost = null; // {x0,y0,intervalMs,samples} wczytany z localStorage na start rundy
+
+function recordGhostSample() {
+    const dx = Math.max(-127, Math.min(127, Math.round(player.x - ghostLastX)));
+    const dy = Math.max(-127, Math.min(127, Math.round(player.y - ghostLastY)));
+    ghostLastX += dx;
+    ghostLastY += dy;
+    const flags = (player.facing === 'left' ? 1 : 0) | (player.isJumping ? 2 : 0) | (player.alive ? 4 : 0);
+    currentRunGhost.push(dx, dy, flags);
+}
+
+function loadBestGhost() {
+    const raw = safeStorageGet(BEST_GHOST_KEY, null);
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        return (parsed && Array.isArray(parsed.samples)) ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+function saveBestGhostIfRecord() {
+    safeStorageSet(BEST_GHOST_KEY, JSON.stringify({
+        x0: player.spawnX,
+        y0: player.spawnY,
+        intervalMs: GHOST_SAMPLE_INTERVAL_MS,
+        samples: currentRunGhost
+    }));
+    safeStorageSet(BEST_SEED_KEY, String(currentSeed));
+}
+
 // Krzywa trudności jako jedna czytelna funkcja czasu (ms od startu rozgrywki), żeby nie
 // rozrzucać magicznych liczb po spawnerze/wrogu/tle. Pełna trudność po 2 minutach przeżycia.
 function getDifficulty(elapsed) {
@@ -34,7 +80,7 @@ let enemySpawnTimer = 0;
 let enemySpawnInterval = 1800;
 
 function randomSpawnInterval(difficulty) {
-    return difficulty.spawnMin + Math.random() * (difficulty.spawnMax - difficulty.spawnMin);
+    return difficulty.spawnMin + rng() * (difficulty.spawnMax - difficulty.spawnMin);
 }
 
 // Wprowadza warianty wroga stopniowo z czasem przeżycia zamiast wszystkich naraz od
@@ -46,11 +92,11 @@ function pickEnemyType(elapsed) {
     if (elapsed >= 15000) pool.push('walkerFast', 'walkerFast');
     if (elapsed >= 45000) pool.push('ghost');
 
-    return pool[Math.floor(Math.random() * pool.length)];
+    return pool[Math.floor(rng() * pool.length)];
 }
 
 function spawnEnemy() {
-    const spawnX = canvas.width + 50 + Math.random() * 250;
+    const spawnX = canvas.width + 50 + rng() * 250;
     const type = pickEnemyType(elapsedMs);
     enemies.push(new Enemy(spawnX, GROUND_LINE_Y, type));
 }
@@ -122,7 +168,18 @@ function handlePlayerEnemyCollisions() {
             // Wartość zależna od typu wroga (ENEMY_TYPES w enemy.js) - trudniejsze warianty
             // (szybszy walkerFast, latający ghost wymagający dobrze wymierzonego skoku) dają
             // więcej punktów niż podstawowy walker.
-            score += (enemy.config.scoreValue || STOMP_SCORE_BASE) * combo;
+            const stompScore = (enemy.config.scoreValue || STOMP_SCORE_BASE) * combo * getScoreMultiplier();
+            score += stompScore;
+
+            // Game feel (feel.js): hit-stop/shake/iskry/floating text/dźwięk - czysto
+            // kosmetyczne, nie wpływają na wynik ani na wykrywanie kolizji.
+            const cx = enemyBounds.x + enemyBounds.width / 2;
+            const cy = enemyBounds.y + enemyBounds.height / 2;
+            triggerHitStop(Math.min(90, 60 + combo * 5));
+            addShakeTrauma(0.15 + Math.min(0.25, combo * 0.03));
+            spawnImpactBurst(cx, cy, enemy.config.tint || enemy.config.placeholderColor, 8 + Math.min(4, combo));
+            spawnComboText(cx, enemyBounds.y, `+${Math.floor(stompScore)}${combo > 1 ? ` x${combo}` : ''}`, 1 + Math.min(0.6, combo * 0.1));
+            playStompSound(combo);
         } else {
             player.takeHit(1);
             break; // trafienie z boku/od dołu - jedno wystarczy na klatkę
@@ -200,6 +257,7 @@ function updateDemo(deltaTime) {
 // sensu. Pełna lista resetowanych rzeczy: gracz (pozycja/hp/prędkości/animator - przez
 // Player.reset()), wrogowie, timery spawnera, wynik/combo/czas, tempo świata, stan gry.
 function startGame() {
+    ensureAudio(); // dopiero teraz mamy gwarantowaną interakcję użytkownika (polityka autoplay)
     player.reset();
 
     enemies.length = 0; // enemies jest const - czyścimy zawartość, nie podmieniamy referencji
@@ -211,6 +269,16 @@ function startGame() {
     elapsedMs = 0;
     worldSpeed = getDifficulty(0).worldSpeed;
 
+    currentRunGhost = [];
+    ghostRecordTimer = 0;
+    ghostLastX = player.spawnX;
+    ghostLastY = player.spawnY;
+    playbackGhost = loadBestGhost();
+    initGhostEntity();
+    resetGhostPlayback();
+
+    resetWorldDirector(); // pogoda/dzień-noc (world.js) zaczynają nową rundę od zera
+
     gameState = 'playing';
 }
 
@@ -219,19 +287,50 @@ function enterGameOver() {
     if (score > bestScore) {
         bestScore = score;
         safeStorageSet(BEST_SCORE_KEY, String(Math.floor(bestScore)));
+        saveBestGhostIfRecord();
     }
 }
 
 // ==== GŁÓWNA AKTUALIZACJA ROZGRYWKI (wywoływana ze script.js:anime()) ====
 function updateGame(deltaTime) {
     if (gameState === 'playing') {
+        // Hit-stop (feel.js): zamraża fizykę/logikę tej klatki bez zamrażania rysowania -
+        // anime() (script.js) leci dalej normalnie, żeby shake/iskry/dźwięk nie ucierpiały.
+        if (hitStopMs > 0) {
+            hitStopMs = Math.max(0, hitStopMs - deltaTime);
+            return;
+        }
+
         elapsedMs += deltaTime;
         const difficulty = getDifficulty(elapsedMs);
-        worldSpeed = difficulty.worldSpeed;
 
-        updateEnemySpawner(deltaTime, difficulty);
-        enemies.forEach(enemy => enemy.update(deltaTime, difficulty.worldSpeed, difficulty.enemyBonus));
+        // WorldDirector (world.js): decyduje WYŁĄCZNIE kiedy zacząć następną zmianę pogody -
+        // tickowanie/rysowanie samego crossfade'u dzieje się w updateParticleSystem() (script.js).
+        updateWorldDirector(elapsedMs);
+
+        // Śnieg spowalnia świat (wrogowie/tło poruszają się z tym samym, zmodyfikowanym
+        // worldSpeed - patrz enemy.update() niżej) i zagęszcza spawn; poza śniegiem mnożniki to 1,
+        // więc zachowanie jest identyczne jak przed WorldDirectorem.
+        worldSpeed = difficulty.worldSpeed * getWeatherSpeedMultiplier();
+        const spawnDensityMul = getWeatherSpawnDensityMultiplier();
+        const weatherDifficulty = {
+            ...difficulty,
+            spawnMin: difficulty.spawnMin * spawnDensityMul,
+            spawnMax: difficulty.spawnMax * spawnDensityMul
+        };
+
+        updateEnemySpawner(deltaTime, weatherDifficulty);
+        enemies.forEach(enemy => enemy.update(deltaTime, worldSpeed, difficulty.enemyBonus));
         player.update(deltaTime, { left: 0, right: canvas.width, top: 0, bottom: canvas.height });
+
+        // Ghost rekordu (ghost.js): nagrywamy bieżący bieg co GHOST_SAMPLE_INTERVAL_MS i
+        // jednocześnie odtwarzamy poprzedni najlepszy (jeśli jest) - oba dzielą elapsedMs.
+        ghostRecordTimer += deltaTime;
+        if (ghostRecordTimer >= GHOST_SAMPLE_INTERVAL_MS) {
+            ghostRecordTimer = 0;
+            recordGhostSample();
+        }
+        updateGhostPlayback(deltaTime);
 
         // Seria stompów (combo) kończy się, gdy gracz wraca na ziemię - sprawdzane PRZED
         // kolizjami tej klatki, żeby świeżo odbity stomp od razu zbudował nowe combo.
@@ -249,7 +348,7 @@ function updateGame(deltaTime) {
             }
         }
 
-        score += difficulty.worldSpeed * timeScale * 0.1; // punkty za przebyty dystans
+        score += difficulty.worldSpeed * timeScale * 0.1 * getScoreMultiplier(); // punkty za przebyty dystans
 
         // Utrata wszystkich hp -> odtwarzamy animację śmierci, a game over dopiero po jej zakończeniu
         if (!player.alive && player.animator.finished) {
@@ -349,6 +448,26 @@ function drawOverlay(title, hint, badge) {
 // Rysuje HUD (wynik/rekord/combo/serduszka HP) i ewentualny ekran menu/game over.
 // Górne rogi canvasu są zajęte przez panel ⚙️ i statystyki (game-demo.html), więc wynik
 // idzie na środek góry, a HP w prawy dolny róg (dawniej tekst "HP: n / m").
+// Pokazuje/ukrywa nakładkę z seedem spawnera (DOM, nie canvas - trzeba dać graczowi
+// skopiować tekst) - widoczna tylko na ekranie game over, sterowana z drawHud() poniżej.
+function updateSeedOverlay() {
+    const overlay = document.getElementById('seedOverlay');
+    if (!overlay) return;
+
+    if (gameState === 'gameover') {
+        document.getElementById('seedValue').textContent = currentSeed;
+        overlay.classList.remove('hidden');
+    } else {
+        overlay.classList.add('hidden');
+    }
+}
+
+function copySeedToClipboard() {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(String(currentSeed)).catch(() => {});
+    }
+}
+
 function drawHud() {
     ctx.save();
     ctx.textAlign = 'center';
@@ -379,6 +498,8 @@ function drawHud() {
         const isNewBest = score > 0 && score >= bestScore;
         drawOverlay('GAME OVER', 'Spacja / dotknij ekranu, aby zagrać ponownie', isNewBest ? 'NOWY REKORD!' : null);
     }
+
+    updateSeedOverlay();
 
     ctx.restore();
 }

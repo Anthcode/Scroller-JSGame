@@ -245,9 +245,9 @@ class Particle {
         }
     }
 
-    draw() {
+    draw(fadeMultiplier = 1) {
         ctx.save();
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.opacity * fadeMultiplier;
 
         if (this.type === 'rain') {
             ctx.strokeStyle = this.color;
@@ -294,7 +294,14 @@ function initParticleSystem() {
     }
 }
 
-function updateParticleSystem() {
+// deltaTime - potrzebny WYŁĄCZNIE do odliczania crossfade'u WorldDirectora (patrz sekcja
+// niżej); zwykłe cząsteczki animują się przez update()/timeScale jak dotychczas.
+function updateParticleSystem(deltaTime) {
+    if (weatherTransition) {
+        updateWeatherCrossfade(deltaTime);
+        return;
+    }
+
     if (weatherMode === 'none') return;
 
     particles.forEach(particle => {
@@ -310,6 +317,16 @@ function changeWeather(newWeatherMode) {
         particle.setTypeProperties();
     });
     console.log(`🌦️ Pogoda zmieniona na: ${weatherMode}`);
+
+    // WorldDirector (sekcja niżej): KAŻDA zmiana pogody - ręczna (klawisz/przycisk debug) czy
+    // automatyczna - odsuwa następną zaplanowaną zmianę o pełny interwał, zamiast walczyć z
+    // automatem o kontrolę przez osobną flagę "manualOverride". elapsedMs (game.js) może
+    // jeszcze nie istnieć przy najwcześniejszych wywołaniach (world.js ładuje się wcześniej),
+    // stąd guard - do czasu pełnego załadowania stron testy DOM (weather-ui.spec.js) i tak nie
+    // zdążą kliknąć żadnego przycisku.
+    if (typeof elapsedMs !== 'undefined') {
+        worldDirectorNextChangeAtMs = elapsedMs + WORLD_DIRECTOR_INTERVAL_MS + (Math.random() * 10000 - 5000);
+    }
 }
 
 function setParticleCount(count) {
@@ -322,4 +339,143 @@ function setParticleCount(count) {
     while (particles.length > particleCount) {
         particles.pop();
     }
+}
+
+// ==== WORLD DIRECTOR ====
+// Automat sterowany elapsedMs (game.js) - co ~25-35s (jitter) przełącza pogodę z crossfade'em
+// zamiast natychmiastowej zmiany, i synchronizuje daySpeed tak, żeby pełny cykl dnia/nocy
+// trwał dokładnie tyle, co rampa trudności (120s, getDifficulty w game.js). Tyka WYŁĄCZNIE
+// gdy gameState==='playing' (wołane z updateGame()) - poza rozgrywką zero zmian względem
+// dzisiejszego zachowania (debug klawisze/przyciski działają tak jak zawsze).
+const WORLD_DIRECTOR_INTERVAL_MS = 30000;
+const WEATHER_CROSSFADE_MS = 1500;
+const DAY_CYCLE_MS = 120000;
+const WEATHER_MODES = ['none', 'rain', 'snow', 'leaves'];
+const NIGHT_LIGHT_RADIUS = 260;
+
+let worldDirectorNextChangeAtMs = null;
+let weatherTransition = null; // {fromMode, toMode, elapsedMs, durationMs, incomingParticles}
+
+function resetWorldDirector() {
+    dayTime = 0;
+    // TARGET_FRAME_MS (core.js) w mianowniku, bo script.js:anime() aktualizuje dayTime jako
+    // `dayTime + daySpeed * gamespeed * timeScale`, a timeScale ≈ deltaTime/TARGET_FRAME_MS -
+    // efektywne tempo na ms to więc daySpeed/TARGET_FRAME_MS, stąd taki podział dla DAY_CYCLE_MS.
+    daySpeed = TARGET_FRAME_MS / DAY_CYCLE_MS;
+    weatherTransition = null;
+    changeWeather('none'); // ustawia też worldDirectorNextChangeAtMs (elapsedMs=0 na starcie rundy)
+}
+
+function pickNextWeatherMode() {
+    const pool = WEATHER_MODES.filter(m => m !== weatherMode);
+    return pool[Math.floor(Math.random() * pool.length)]; // pogoda jest dekoracyjna - nie musi być seedowana
+}
+
+function beginWeatherCrossfade(toMode) {
+    if (toMode === weatherMode || weatherTransition) return;
+    const incoming = [];
+    for (let i = 0; i < particleCount; i++) incoming.push(new Particle(toMode));
+    weatherTransition = { fromMode: weatherMode, toMode, elapsedMs: 0, durationMs: WEATHER_CROSSFADE_MS, incomingParticles: incoming };
+
+    // Integracja z game feel (feel.js, etap 1) - tylko przejścia zainicjowane przez sam
+    // WorldDirector (nie ręczne changeWeather() z klawiszy/przycisków, które go omijają)
+    // dostają subtelny akcent. Świadomie BEZ hit-stopu - zamrażanie fizyki z powodu zmiany
+    // pogody byłoby złym game-feelem (hit-stop ma sygnalizować impakt walki, nie ambient).
+    if (toMode === 'rain') {
+        addShakeTrauma(0.2);
+        playThunderRumble();
+    }
+}
+
+function updateWeatherCrossfade(deltaTime) {
+    if (!weatherTransition) return;
+
+    weatherTransition.elapsedMs += deltaTime;
+    const progress = Math.min(1, weatherTransition.elapsedMs / weatherTransition.durationMs);
+
+    particles.forEach(p => { p.update(); p.draw(1 - progress); });
+    weatherTransition.incomingParticles.forEach(p => { p.update(); p.draw(progress); });
+
+    if (progress >= 1) {
+        const toMode = weatherTransition.toMode;
+        particles = weatherTransition.incomingParticles;
+        weatherTransition = null;
+        changeWeather(toMode); // commit - jedno miejsce prawdy dla weatherMode, patrz komentarz tam
+    }
+}
+
+// Wołane z updateGame() (game.js, gałąź 'playing') - WYŁĄCZNIE decyduje KIEDY zacząć kolejną
+// zmianę pogody; samo tickowanie/rysowanie crossfade'u dzieje się w updateParticleSystem()
+// (script.js:anime(), każda realna klatka), żeby trwający fade dokańczał się nawet po
+// game over, tak jak zwykłe cząsteczki pogody zawsze animują się niezależnie od gameState.
+function updateWorldDirector(elapsedMsNow) {
+    if (weatherTransition) return;
+    if (worldDirectorNextChangeAtMs === null || elapsedMsNow < worldDirectorNextChangeAtMs) return;
+    beginWeatherCrossfade(pickNextWeatherMode());
+}
+
+// Subtelny akcent (feel.js, etap 1) przy zachodzie słońca - próg t=0.750 to dokładnie
+// keyframe "dusk" w DAY_PHASES. duskShakeArmed pilnuje jednego wyzwolenia na cykl dnia
+// (nie na klatkę) i ponownie się zbroi, gdy dayTime spadnie poniżej progu (nowy cykl).
+let duskShakeArmed = true;
+
+function maybeTriggerDuskShake(prevDayTime) {
+    if (dayTime >= 0.750 && prevDayTime < 0.750 && duskShakeArmed) {
+        addShakeTrauma(0.08);
+        duskShakeArmed = false;
+    } else if (dayTime < 0.750) {
+        duskShakeArmed = true;
+    }
+}
+
+function isNightTime() {
+    return dayTime <= 0.20 || dayTime >= 0.80;
+}
+
+function getWeatherSpeedMultiplier() {
+    return weatherMode === 'snow' ? 0.85 : 1;
+}
+
+function getWeatherSpawnDensityMultiplier() {
+    return weatherMode === 'snow' ? 0.7 : 1; // mniejszy spawnMin/Max = gęstszy spawn
+}
+
+function getScoreMultiplier() {
+    const night = isNightTime();
+    const strongWind = windForce >= 2;
+    if (night && strongWind) return 1.8;
+    if (night || strongWind) return 1.2;
+    return 1;
+}
+
+// worldX/worldY - środek encji, w tych samych współrzędnych co canvas. Poza nocą zawsze 1
+// (brak przygaszenia). typeof player - world.js ładuje się przed player.js/game.js, ale ta
+// funkcja jest wołana dopiero w runtime (draw wrogów, enemy.js), gdy player już istnieje -
+// guard tylko na wszelki wypadek (np. wywołanie zanim script.js utworzy gracza).
+function getNightDimAlpha(worldX, worldY) {
+    if (!isNightTime() || typeof player === 'undefined') return 1;
+    const px = player.x + player.width / 2;
+    const py = player.y + player.height / 2;
+    const dist = Math.hypot(worldX - px, worldY - py);
+    const t = Math.min(1, Math.max(0, (dist - NIGHT_LIGHT_RADIUS * 0.4) / (NIGHT_LIGHT_RADIUS * 0.6)));
+    return 1 - t * 0.7; // nigdy nie schodzi poniżej 0.3 - wróg ma zostać słabo widoczny, nie znikać
+}
+
+// Radialna "dziura światła" wokół gracza - w przeciwieństwie do drawDayNightOverlay() (gradient
+// pionowy na całą scenę) ta winieta faktycznie reaguje na pozycję gracza, więc noc staje się
+// realnym utrudnieniem (widoczność), nie tylko kolorystyką tła.
+function drawNightVignette(ctx) {
+    if (!isNightTime() || typeof player === 'undefined') return;
+
+    const px = player.x + player.width / 2;
+    const py = player.y + player.height / 2;
+    const nightStrength = dayTime <= 0.20 ? (1 - dayTime / 0.20) : (dayTime - 0.80) / 0.20;
+
+    ctx.save();
+    const grad = ctx.createRadialGradient(px, py, NIGHT_LIGHT_RADIUS * 0.3, px, py, NIGHT_LIGHT_RADIUS * 1.3);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, `rgba(0,0,0,${0.55 * nightStrength})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
 }

@@ -6,13 +6,13 @@ const { gotoGame } = require('./helpers');
 test.describe('pickEnemyType - harmonogram odblokowania', () => {
     test('przed 15s pojawia sie tylko walker', async ({ page }) => {
         await gotoGame(page);
-        const types = await page.evaluate(() => Array.from({ length: 60 }, () => pickEnemyType(0)));
+        const types = await page.evaluate(() => { seedGameRNG(42); return Array.from({ length: 60 }, () => pickEnemyType(0)); });
         expect(new Set(types)).toEqual(new Set(['walker']));
     });
 
     test('po 15s dochodzi walkerFast, ghost jeszcze nie', async ({ page }) => {
         await gotoGame(page);
-        const types = await page.evaluate(() => Array.from({ length: 300 }, () => pickEnemyType(20000)));
+        const types = await page.evaluate(() => { seedGameRNG(42); return Array.from({ length: 300 }, () => pickEnemyType(20000)); });
         const uniq = new Set(types);
         expect(uniq.has('walker')).toBe(true);
         expect(uniq.has('walkerFast')).toBe(true);
@@ -21,8 +21,24 @@ test.describe('pickEnemyType - harmonogram odblokowania', () => {
 
     test('po 45s moze pojawic sie ghost', async ({ page }) => {
         await gotoGame(page);
-        const types = await page.evaluate(() => Array.from({ length: 400 }, () => pickEnemyType(60000)));
+        const types = await page.evaluate(() => { seedGameRNG(42); return Array.from({ length: 400 }, () => pickEnemyType(60000)); });
         expect(new Set(types).has('ghost')).toBe(true);
+    });
+});
+
+test.describe('Seedowany PRNG (core.js) - determinizm spawnera', () => {
+    test('ten sam seed daje identyczna sekwencje typow wrogow', async ({ page }) => {
+        await gotoGame(page);
+        const seqA = await page.evaluate(() => { seedGameRNG(777); return Array.from({ length: 50 }, () => pickEnemyType(60000)); });
+        const seqB = await page.evaluate(() => { seedGameRNG(777); return Array.from({ length: 50 }, () => pickEnemyType(60000)); });
+        expect(seqA).toEqual(seqB);
+    });
+
+    test('rozne seedy zazwyczaj daja rozne sekwencje', async ({ page }) => {
+        await gotoGame(page);
+        const seqA = await page.evaluate(() => { seedGameRNG(1); return Array.from({ length: 50 }, () => pickEnemyType(60000)); });
+        const seqB = await page.evaluate(() => { seedGameRNG(2); return Array.from({ length: 50 }, () => pickEnemyType(60000)); });
+        expect(seqA).not.toEqual(seqB);
     });
 });
 

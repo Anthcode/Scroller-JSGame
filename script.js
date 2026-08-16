@@ -13,12 +13,24 @@ function anime(timestamp = 0) {
   lastTimestamp = timestamp;
   updateTimeScale(deltaTime);
 
+  // Game feel (feel.js): odliczane co REALNĄ klatkę, niezależnie od hit-stopu (który
+  // zamraża tylko fizykę w updateGame()) - inaczej shake/iskry/tekst zamarłyby razem z nią.
+  updateFeelSystems(deltaTime);
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const shakeOffset = getShakeOffset();
+  ctx.save();
+  ctx.translate(shakeOffset.x, shakeOffset.y);
 
   layer11.update();
   layer11.draw();
 
+  const prevDayTime = dayTime;
   dayTime = (dayTime + daySpeed * gamespeed * timeScale) % 1;
+  // Akcent zachodu słońca (feel.js/world.js, etap 1+3) tylko w trakcie realnej rozgrywki -
+  // ekran menu/demo nie powinien trząść kamerą z powodu tła, które i tak żyje cały czas.
+  if (gameState === 'playing') maybeTriggerDuskShake(prevDayTime);
   drawDayNightOverlay();
   drawStars();
   drawSunMoon();
@@ -38,8 +50,9 @@ function anime(timestamp = 0) {
   layer2.update();
   layer2.draw();
 
-  // SYSTEM CZĄSTECZEK - rysowany przed pierwszą warstwą
-  updateParticleSystem();
+  // SYSTEM CZĄSTECZEK - rysowany przed pierwszą warstwą. deltaTime potrzebny WYŁĄCZNIE do
+  // odliczania crossfade'u WorldDirectora (world.js), zwykłe cząsteczki nadal używają timeScale.
+  updateParticleSystem(deltaTime);
 
   layer1.update();
   layer1.draw();
@@ -55,8 +68,19 @@ function anime(timestamp = 0) {
     demoPlayer.draw(ctx);
   } else {
     enemies.forEach(enemy => enemy.draw(ctx));
+    drawGhost(ctx); // duch (ghost.js) pod prawdziwym graczem, żeby nie zasłaniał aktualnego biegu
     player.draw(ctx);
   }
+
+  // Winieta nocna (WorldDirector, world.js) PRZED iskrami - mają zostać jasne/widoczne na
+  // przyciemnionej scenie, nie zgasić się razem z nią.
+  drawNightVignette(ctx);
+
+  // Iskry uderzenia trzęsą się razem ze światem (wewnątrz translacji shake'u), floating
+  // combo text zostaje poza nią - ma być czytelny, nie ma sensu żeby liczby drgały losowo.
+  drawImpactParticles(ctx);
+  ctx.restore();
+  drawFloatingTexts(ctx);
 
   drawHud();
 
