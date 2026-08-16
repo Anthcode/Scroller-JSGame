@@ -32,6 +32,45 @@ test.describe('Stomp - wrogowie naziemni (walker/walkerFast)', () => {
         expect(result.score).toBeGreaterThan(0);
     });
 
+    test('ladowanie tuz przy gornej krawedzi wroga liczy sie jako stomp, nawet gdy prevBottom juz minal prog o kilka px', async ({ page }) => {
+        // Regresja: prevBottom <= enemyTop wymaga zlapania DOKLADNIE klatki przejscia. W realnej
+        // (nie w pelni deterministycznej) rozgrywce gracz czesto zaczyna nakladac sie na wroga
+        // klatke/kilka pikseli PO tym, jak prevBottom juz zeszlo ponizej gornej krawedzi wroga -
+        // mimo ze wizualnie i tak laduje mu na glowie. Bez uzupelniajacego warunku "stopy nadal
+        // w gornej polowie ciala wroga" taki (bardzo typowy) skok mylnie liczyl sie jako
+        // trafienie z boku (patrz zgloszenie: "naskakuje od gory, wrog nie ginie, tracę zycia").
+        await gotoGame(page);
+        await startGame(page);
+
+        const result = await page.evaluate(() => {
+            enemies.length = 0;
+            const e = new Enemy(player.x, 0, 'walker');
+            e.y = 500 - e.config.inset.top; // enemyBounds.y (gora, po wcieciu) == 500
+
+            enemies.push(e);
+
+            // Stopy gracza (feetY, po wcieciu) tuz przy gornej krawedzi wroga - w gornej polowie
+            // jego ciala (enemyBounds.height 68, wiec polowa to 534) - genuinie ladowanie na glowie.
+            const feetY = 510;
+            const boundsHeight = 86; // player height(96) - insetTop(6) - insetBottom(4)
+            player.y = feetY - boundsHeight - 6; // -insetTop, zeby playerBounds.y wyszlo poprawnie
+            player.velocityY = 6; // opada
+            player.isJumping = true;
+            // "Przespana" klatka przejscia: stopy z poprzedniej klatki byly juz 5px ZA progiem
+            // (505 > enemyBounds.y=500) - stary, wylacznie-prevBottom warunek odrzucilby to jako hit.
+            player.prevBottom = 505;
+            const hpBefore = player.hp;
+
+            handlePlayerEnemyCollisions();
+
+            return { enemyAlive: e.alive, hp: player.hp, hpBefore, velocityY: player.velocityY };
+        });
+
+        expect(result.enemyAlive).toBe(false);
+        expect(result.hp).toBe(result.hpBefore);
+        expect(result.velocityY).toBeLessThan(0);
+    });
+
     test('kontakt z boku (bez skoku) rani gracza, nie zabija wroga', async ({ page }) => {
         await gotoGame(page);
         await startGame(page);
