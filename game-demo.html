@@ -15,10 +15,10 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%,-50%);
-    /* Domyślnie (samodzielne otwarcie tej strony, testy e2e, albo prawdziwa rozgrywka
-       pełnoekranowa - patrz html.fullscreen niżej) dopasuj CAŁY canvas do viewportu bez
-       przycinania ("contain") - gracz musi widzieć całą scenę, nawet kosztem pustych
-       pasów przy niepasujących proporcjach. */
+    /* Domyślnie (samodzielne otwarcie tej strony - podgląd developerski, testy e2e)
+       dopasuj CAŁY canvas do viewportu bez przycinania ("contain") - poza kontekstem
+       ekranu startowego liczy się widoczność całej sceny, nawet kosztem pustych pasów
+       przy niepasujących proporcjach. */
     width: auto;
     height: auto;
     max-width: 100vw;
@@ -27,15 +27,14 @@
        canvasie - inaczej przeglądarka próbuje scrollować stronę. */
     touch-action: none;
   }
-  /* Osadzone w małym oknie ekranu startowego (menu/demo, przed kliknięciem ZAGRAJ) -
-     wycięcie w grafice ramki ma inne proporcje niż canvas (800x600, patrz core.js), więc
-     "contain" zostawiał puste pasy po bokach zamiast wypełniać całą dziurę. Tu liczy się
-     wypełnienie dziury bez przerw, nie widoczność całej sceny (to tylko dekoracyjna pętla
-     demo) - skalujemy więc po szerokości ("cover"); nadmiar wysokości i tak chowa się pod
-     nieprzezroczystą grafiką ramki poza wycięciem. html.fullscreen (ustawiane przez
-     index.html w momencie startGame()) wraca do pełnego "contain" na czas prawdziwej gry.
-  */
-  html.embedded:not(.fullscreen) canvas {
+  /* Osadzone w oknie ekranu startowego (index.html, przez #gameFrame) - zarówno w trybie
+     menu/demo, JAK I w trakcie prawdziwej rozgrywki (patrz zmiana: gra zostaje w wyciętym
+     oknie ramki zamiast przechodzić na pełny ekran). Wycięcie w grafice ramki ma inne
+     proporcje niż canvas (800x600, patrz core.js), więc "contain" zostawiał puste pasy po
+     bokach zamiast wypełniać całą dziurę - skalujemy więc po szerokości ("cover"); nadmiar
+     wysokości chowa się pod nieprzezroczystą grafiką ramki poza wycięciem, dokładnie tak
+     samo dla demo i dla realnej gry, żeby przejście między nimi nie skakało rozmiarem. */
+  html.embedded canvas {
     width: 100%;
     height: auto;
     max-width: none;

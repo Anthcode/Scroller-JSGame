@@ -25,30 +25,6 @@
   #settingsBtn div { width: 36%; aspect-ratio: 1; border-radius: 50%; border: 2px solid #00ffff; }
   @keyframes ctaPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 
-  /* W trakcie rozgrywki wracamy do pełnoekranowego canvasu (tak jak przed dodaniem
-     ekranu startowego z ramką) zamiast trzymać grę w małym wyciętym oknie - #gameFrame
-     wychodzi z pozycjonowania względem .card i pokrywa cały viewport, NAD grafiką ramki
-     (frame-art się chowa). #backBtn przechodzi na pozycjonowanie względem viewportu,
-     żeby nie został uwięziony w wąskim pasku .card na szerokich ekranach. */
-  .card.playing .frame-art,
-  .card.playing #settingsBtn {
-    display: none;
-  }
-  .card.playing #gameFrame {
-    position: fixed;
-    inset: 0;
-    left: 0;
-    top: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 3;
-  }
-  .card.playing #backBtn {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-  }
-
   /* Ekrany desktopowe (szerokie/poziome) dostają osobną, poziomą grafikę ramki
      (images/parallax-frame-cutout-desktop.png, 1672x941) zamiast rozciągania pionowej
      grafiki telefonowej - .card zmienia proporcje, a #gameFrame/#playHit dostają nowe
@@ -97,13 +73,11 @@
   </div>
 </div>
 <script>
-  const card = document.querySelector('.card');
   const gameFrame = document.getElementById('gameFrame');
   const playHit = document.getElementById('playHit');
   const backBtn = document.getElementById('backBtn');
 
   playHit.addEventListener('click', () => {
-    card.classList.add('playing');
     gameFrame.classList.add('playing');
     playHit.classList.add('hidden');
     backBtn.classList.add('visible');
@@ -114,16 +88,10 @@
       // nadrzędnym, więc bez jawnego focus() klawiatura zostaje "przypięta" do strony
       // startowej i żaden klawisz nigdy nie dociera do gry (gracz stoi w miejscu).
       gameFrame.focus();
-      // Sygnał do CSS wewnątrz iframe'a (html.fullscreen w game-demo.html), żeby canvas
-      // wrócił do pełnego "contain" na czas prawdziwej gry - w małym oknie menu skaluje
-      // się "po szerokości" i przycina nadmiar wysokości (patrz game-demo.html), co dla
-      // realnej rozgrywki obcinałoby graczowi kawałek sceny.
-      try { gameFrame.contentDocument.documentElement.classList.add('fullscreen'); } catch (e) {}
     }, 50);
   });
 
   backBtn.addEventListener('click', () => {
-    card.classList.remove('playing');
     gameFrame.classList.remove('playing');
     playHit.classList.remove('hidden');
     backBtn.classList.remove('visible');
