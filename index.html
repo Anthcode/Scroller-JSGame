@@ -48,6 +48,42 @@
     top: 16px;
     left: 16px;
   }
+
+  /* Ekrany desktopowe (szerokie/poziome) dostają osobną, poziomą grafikę ramki
+     (images/parallax-frame-cutout-desktop.png, 1672x941) zamiast rozciągania pionowej
+     grafiki telefonowej - .card zmienia proporcje, a #gameFrame/#playHit dostają nowe
+     procenty wykryte piksel-po-pikselu na tym obrazku (ten sam sposób co dla wersji
+     mobile - patrz README/handoff). Ikona ustawień jest już wypalona w tej grafice
+     (w przeciwieństwie do mobile), więc CSS-owy #settingsBtn się tu chowa.
+     content: url(...) na <img> podmienia renderowany plik bez ruszania atrybutu src -
+     wspierane we wszystkich głównych przeglądarkach. */
+  @media (min-width: 1024px) and (orientation: landscape) {
+    .card {
+      height: auto;
+      max-width: none;
+      width: min(100vw, 177.68vh);
+      aspect-ratio: 1672 / 941;
+      max-height: 100vh;
+    }
+    .frame-art {
+      content: url('images/parallax-frame-cutout-desktop.png');
+    }
+    #gameFrame {
+      left: 18.9%;
+      top: 21.25%;
+      width: 62.26%;
+      height: 56.96%;
+    }
+    #playHit {
+      left: 36.36%;
+      top: 86.08%;
+      width: 27.27%;
+      height: 9.56%;
+    }
+    #settingsBtn {
+      display: none;
+    }
+  }
 </style>
 </head>
 <body>
