@@ -73,6 +73,11 @@
     backBtn.classList.add('visible');
     setTimeout(() => {
       try { gameFrame.contentWindow.startGame && gameFrame.contentWindow.startGame(); } catch (e) {}
+      // Sterowanie (ruch/skok) w player.js nasłuchuje keydown na document silnika,
+      // czyli dokumencie WEWNĄTRZ iframe'a - klik w #playHit odbył się w dokumencie
+      // nadrzędnym, więc bez jawnego focus() klawiatura zostaje "przypięta" do strony
+      // startowej i żaden klawisz nigdy nie dociera do gry (gracz stoi w miejscu).
+      gameFrame.focus();
     }, 50);
   });
 
