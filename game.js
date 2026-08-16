@@ -410,6 +410,14 @@ function drawHeart(cx, cy, scale, color) {
     ctx.restore();
 }
 
+// `player` jest zadeklarowany przez `const` w script.js, więc (w przeciwieństwie do funkcji)
+// nie ląduje na `window` - strona startowa (index.html) nie ma do niego dostępu przez
+// gameFrame.contentWindow.player. Ta funkcja daje jej bezpieczny odczyt stanu żyć do
+// narysowania serc na ramce startowej (patrz index.html).
+function getLives() {
+    return { hp: player.hp, maxHp: player.maxHp };
+}
+
 function drawHearts() {
     const scale = 0.7, spacing = 30, margin = 20;
     const totalWidth = (player.maxHp - 1) * spacing;
