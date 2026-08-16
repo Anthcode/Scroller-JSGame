@@ -28,6 +28,18 @@ function updateTimeScale(deltaTime) {
     timeScale = Math.min(Math.max(deltaTime / TARGET_FRAME_MS, 0), 3);
 }
 
+// Górny limit na surowe deltaTime (ms) przekazywane dalej do update*() w całej grze. timeScale
+// (wyżej) chroni już ruch/fizykę przemnażaną przez niego, ale timery liczone WPROST w ms
+// (elapsedMs, hitStopMs, invulnerableTimer, animator.frameTimer, ghostRecordTimer, crossfade
+// pogody) dostawały surowe deltaTime bez żadnego ograniczenia - po dłuższym czasie karty w tle
+// jedna ogromna klatka potrafiła np. od razu wywindować trudność na maksimum. 250ms to ok. 15
+// klatek @60fps - z zapasem ponad normalny frame time, ale odcina wielosekundowe/minutowe skoki.
+const MAX_DELTA_MS = 250;
+
+function clampDeltaTime(deltaTime) {
+    return Math.min(deltaTime, MAX_DELTA_MS);
+}
+
 // localStorage bywa niedostępny (tryb prywatny, przekroczony limit) - te wrappery nigdy
 // nie rzucają, więc nieudany zapis/odczyt rekordu nie wywali pętli gry.
 function safeStorageGet(key, fallback) {

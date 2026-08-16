@@ -9,8 +9,12 @@ let lastTimestamp = null;
 
 function anime(timestamp = 0) {
   // Delta time w ms - pierwsza klatka nie ma poprzedniego timestampu, więc pomijamy update
-  const deltaTime = lastTimestamp === null ? 0 : timestamp - lastTimestamp;
+  const rawDeltaTime = lastTimestamp === null ? 0 : timestamp - lastTimestamp;
   lastTimestamp = timestamp;
+  // Clamp (core.js) - bez niego powrót z uśpionej/zminimalizowanej karty po dłuższym czasie
+  // dawałby jedną klatkę z ogromnym deltaTime, które trafia WPROST (bez timeScale) do
+  // timerów w ms w całej grze (elapsedMs, hitStopMs, animator.frameTimer...).
+  const deltaTime = clampDeltaTime(rawDeltaTime);
   updateTimeScale(deltaTime);
 
   // Game feel (feel.js): odliczane co REALNĄ klatkę, niezależnie od hit-stopu (który
