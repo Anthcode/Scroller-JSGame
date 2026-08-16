@@ -114,6 +114,11 @@
       // nadrzędnym, więc bez jawnego focus() klawiatura zostaje "przypięta" do strony
       // startowej i żaden klawisz nigdy nie dociera do gry (gracz stoi w miejscu).
       gameFrame.focus();
+      // Sygnał do CSS wewnątrz iframe'a (html.fullscreen w game-demo.html), żeby canvas
+      // wrócił do pełnego "contain" na czas prawdziwej gry - w małym oknie menu skaluje
+      // się "po szerokości" i przycina nadmiar wysokości (patrz game-demo.html), co dla
+      // realnej rozgrywki obcinałoby graczowi kawałek sceny.
+      try { gameFrame.contentDocument.documentElement.classList.add('fullscreen'); } catch (e) {}
     }, 50);
   });
 
