@@ -114,7 +114,7 @@ class Enemy {
 
         if (config.hover) {
             this.baseY = groundLineY - config.hover.groundClearance - this.height;
-            this.hoverPhase = Math.random() * Math.PI * 2; // przesunięcie fazy - wrogowie nie kołyszą się w unisono
+            this.hoverPhase = rng() * Math.PI * 2; // przesunięcie fazy - wrogowie nie kołyszą się w unisono
             this.elapsedMs = 0;
         } else {
             this.baseY = groundLineY - this.height;

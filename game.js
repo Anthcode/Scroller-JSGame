@@ -34,7 +34,7 @@ let enemySpawnTimer = 0;
 let enemySpawnInterval = 1800;
 
 function randomSpawnInterval(difficulty) {
-    return difficulty.spawnMin + Math.random() * (difficulty.spawnMax - difficulty.spawnMin);
+    return difficulty.spawnMin + rng() * (difficulty.spawnMax - difficulty.spawnMin);
 }
 
 // Wprowadza warianty wroga stopniowo z czasem przeżycia zamiast wszystkich naraz od
@@ -46,11 +46,11 @@ function pickEnemyType(elapsed) {
     if (elapsed >= 15000) pool.push('walkerFast', 'walkerFast');
     if (elapsed >= 45000) pool.push('ghost');
 
-    return pool[Math.floor(Math.random() * pool.length)];
+    return pool[Math.floor(rng() * pool.length)];
 }
 
 function spawnEnemy() {
-    const spawnX = canvas.width + 50 + Math.random() * 250;
+    const spawnX = canvas.width + 50 + rng() * 250;
     const type = pickEnemyType(elapsedMs);
     enemies.push(new Enemy(spawnX, GROUND_LINE_Y, type));
 }
