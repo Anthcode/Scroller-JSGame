@@ -37,6 +37,17 @@
     left: 16px;
   }
   .frame-art { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; image-rendering: pixelated; }
+
+  /* Realny licznik żyć (serca) w miejscu, gdzie w grafice ramki (frame-art) kiedyś było
+     wypalone na sztywno 6 serc - te piksele zostały wymazane z obu PNG-ów (images/parallax-
+     frame-cutout*.png), a w ich miejsce wchodzi ta nakładka z 3 sercami (tyle ile realnie ma
+     gracz, patrz player.maxHp w player.js) zbudowana z images/artefacts/life-hearts.png i
+     zasilana prawdziwym stanem gry przez getLives() (patrz script niżej). Współrzędne %
+     odpowiadają dokładnie wymazanemu obszarowi na obrazku mobile (853x1844) - nadpisywane
+     w media query desktopowej dla parallax-frame-cutout-desktop.png (1672x941). */
+  .lives-hud { position: absolute; left: 58.38%; top: 87.20%; width: 34.82%; height: 10.85%; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 4%; pointer-events: none; }
+  .lives-hud .heart-slot { height: 68%; aspect-ratio: 84 / 72; background-image: url('images/artefacts/life-hearts.png'); background-size: 300% 100%; background-position: 0 0; background-repeat: no-repeat; image-rendering: pixelated; transition: filter 0.15s ease, opacity 0.15s ease; }
+  .lives-hud .heart-slot.lost { filter: grayscale(1) brightness(0.45); opacity: 0.45; }
   #playHit { position: absolute; left: 11.9%; top: 77.5%; width: 75.9%; height: 9%; z-index: 3; cursor: pointer; animation: ctaPulse 2.2s ease-in-out infinite; }
   #playHit:hover { animation: none; filter: brightness(1.15); }
   #playHit.hidden { display: none; }
@@ -82,6 +93,12 @@
     #settingsBtn {
       display: none;
     }
+    .lives-hud {
+    left: 77.85%;
+    top: 83.3%;
+    width: 15.37%;
+    height: 10.62%;
+    }
     /* Fullscreen-w-trakcie-gry (wyżej) jest zamierzony wyłącznie dla mobile - tu wycięcie w
        ramce jest już wystarczająco duże, a zeskakiwanie do pełnego ekranu psułoby spójność
        z ekranem menu bez realnej korzyści. Te same selektory, wyżej w kaskadzie (media query
@@ -111,6 +128,11 @@
   <div class="card">
     <iframe id="gameFrame" src="game-demo.html" title="Podgląd gry"></iframe>
     <img class="frame-art" src="images/parallax-frame-cutout.png" alt="">
+    <div id="livesHud" class="lives-hud">
+      <div class="heart-slot"></div>
+      <div class="heart-slot"></div>
+      <div class="heart-slot"></div>
+    </div>
     <div id="playHit"></div>
     <div id="backBtn">← MENU</div>
     <div id="settingsBtn"><div></div></div>
@@ -120,6 +142,23 @@
   const gameFrame = document.getElementById('gameFrame');
   const playHit = document.getElementById('playHit');
   const backBtn = document.getElementById('backBtn');
+  const heartSlots = document.querySelectorAll('#livesHud .heart-slot');
+
+  // Odpytuje getLives() (game.js, wewnątrz iframe'a) co klatkę i przemalowuje serca na
+  // ramce startowej - działa zarówno w demie na ekranie menu, jak i w trakcie realnej gry
+  // (na desktopie ramka zostaje widoczna podczas gry, patrz #gameFrame.playing ~ .frame-art
+  // wyżej). Bezpośredni odczyt gameFrame.contentWindow zamiast postMessage: to ten sam
+  // origin (statyczne pliki lokalne), więc synchroniczny dostęp działa od razu.
+  function updateLivesHud() {
+    try {
+      const lives = gameFrame.contentWindow.getLives && gameFrame.contentWindow.getLives();
+      if (lives) {
+        heartSlots.forEach((el, i) => el.classList.toggle('lost', i >= lives.hp));
+      }
+    } catch (e) {}
+    requestAnimationFrame(updateLivesHud);
+  }
+  updateLivesHud();
 
   // Ten sam breakpoint co CSS "@media (min-width: 1024px) and (orientation: landscape)"
   // wyżej (desktop = ramka zostaje taka sama w trakcie gry, #gameFrame.playing nic nie
