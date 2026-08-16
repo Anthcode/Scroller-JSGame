@@ -219,6 +219,24 @@ function getNoiseBuffer() {
     return noiseBuffer;
 }
 
+// WorldDirector (world.js): niskoczęstotliwościowy grzmot przy wejściu w deszcz - jedyny
+// dźwięk ambientowy w tej warstwie, reszta play*() reaguje na akcje gracza (skok/stomp/trafienie).
+function playThunderRumble() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(60, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.6);
+    gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.25, audioCtx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.7);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.7);
+}
+
 function playHitNoise() {
     if (!audioCtx) return;
     const source = audioCtx.createBufferSource();

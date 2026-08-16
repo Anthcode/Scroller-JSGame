@@ -196,6 +196,10 @@ class Enemy {
         // Domyślna klatka w arkuszu ma wyglądać jak ruch w lewo, więc odbijamy przy ruchu w prawo.
         ctx.save();
 
+        // Noc (WorldDirector, world.js): wrogowie poza kołem światła gracza są przygaszeni -
+        // ustawione WEWNĄTRZ ctx.save()/restore(), więc nie trzeba osobno resetować globalAlpha.
+        ctx.globalAlpha = getNightDimAlpha(this.x + this.width / 2, this.y + this.height / 2);
+
         if (this.direction === 1) {
             ctx.translate(this.x + this.width, this.y);
             ctx.scale(-1, 1);

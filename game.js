@@ -168,7 +168,7 @@ function handlePlayerEnemyCollisions() {
             // Wartość zależna od typu wroga (ENEMY_TYPES w enemy.js) - trudniejsze warianty
             // (szybszy walkerFast, latający ghost wymagający dobrze wymierzonego skoku) dają
             // więcej punktów niż podstawowy walker.
-            const stompScore = (enemy.config.scoreValue || STOMP_SCORE_BASE) * combo;
+            const stompScore = (enemy.config.scoreValue || STOMP_SCORE_BASE) * combo * getScoreMultiplier();
             score += stompScore;
 
             // Game feel (feel.js): hit-stop/shake/iskry/floating text/dźwięk - czysto
@@ -277,6 +277,8 @@ function startGame() {
     initGhostEntity();
     resetGhostPlayback();
 
+    resetWorldDirector(); // pogoda/dzień-noc (world.js) zaczynają nową rundę od zera
+
     gameState = 'playing';
 }
 
@@ -301,10 +303,24 @@ function updateGame(deltaTime) {
 
         elapsedMs += deltaTime;
         const difficulty = getDifficulty(elapsedMs);
-        worldSpeed = difficulty.worldSpeed;
 
-        updateEnemySpawner(deltaTime, difficulty);
-        enemies.forEach(enemy => enemy.update(deltaTime, difficulty.worldSpeed, difficulty.enemyBonus));
+        // WorldDirector (world.js): decyduje WYŁĄCZNIE kiedy zacząć następną zmianę pogody -
+        // tickowanie/rysowanie samego crossfade'u dzieje się w updateParticleSystem() (script.js).
+        updateWorldDirector(elapsedMs);
+
+        // Śnieg spowalnia świat (wrogowie/tło poruszają się z tym samym, zmodyfikowanym
+        // worldSpeed - patrz enemy.update() niżej) i zagęszcza spawn; poza śniegiem mnożniki to 1,
+        // więc zachowanie jest identyczne jak przed WorldDirectorem.
+        worldSpeed = difficulty.worldSpeed * getWeatherSpeedMultiplier();
+        const spawnDensityMul = getWeatherSpawnDensityMultiplier();
+        const weatherDifficulty = {
+            ...difficulty,
+            spawnMin: difficulty.spawnMin * spawnDensityMul,
+            spawnMax: difficulty.spawnMax * spawnDensityMul
+        };
+
+        updateEnemySpawner(deltaTime, weatherDifficulty);
+        enemies.forEach(enemy => enemy.update(deltaTime, worldSpeed, difficulty.enemyBonus));
         player.update(deltaTime, { left: 0, right: canvas.width, top: 0, bottom: canvas.height });
 
         // Ghost rekordu (ghost.js): nagrywamy bieżący bieg co GHOST_SAMPLE_INTERVAL_MS i
@@ -332,7 +348,7 @@ function updateGame(deltaTime) {
             }
         }
 
-        score += difficulty.worldSpeed * timeScale * 0.1; // punkty za przebyty dystans
+        score += difficulty.worldSpeed * timeScale * 0.1 * getScoreMultiplier(); // punkty za przebyty dystans
 
         // Utrata wszystkich hp -> odtwarzamy animację śmierci, a game over dopiero po jej zakończeniu
         if (!player.alive && player.animator.finished) {

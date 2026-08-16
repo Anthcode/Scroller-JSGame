@@ -23,6 +23,11 @@ const PLAYER_ANIM_DATA = {
     initialState: 'idle'
 };
 
+// WorldDirector (world.js): w deszczu sterowanie poziome przechodzi z twardego przypisania
+// na lerp ("ślizg"), a w skoku silny wiatr znosi gracza proporcjonalnie do windForce.
+const RAIN_INERTIA_LERP = 0.15;
+const WIND_PUSH_FACTOR = 0.15;
+
 class Player {
     // bindControls: false pomija podpięcie prawdziwych listenerów klawiatury - używane przez
     // demoPlayer (game.js), żeby gracz w pętli demo na ekranie menu nie reagował na realne
@@ -169,9 +174,22 @@ class Player {
         const controlsLocked = !this.alive || this.animator.states[this.animator.currentState].locked;
 
         if (!controlsLocked) {
-            this.velocityX = 0;
-            if (this.keys.left) this.velocityX = -this.speed;
-            if (this.keys.right) this.velocityX = this.speed;
+            const targetVX = this.keys.left ? -this.speed : (this.keys.right ? this.speed : 0);
+
+            // Deszcz (WorldDirector, world.js): sterowanie "ślizga się" zamiast reagować
+            // natychmiast - poza deszczem zachowanie jest identyczne jak wcześniej (hard-set).
+            if (typeof weatherMode !== 'undefined' && weatherMode === 'rain') {
+                this.velocityX += (targetVX - this.velocityX) * RAIN_INERTIA_LERP * timeScale;
+            } else {
+                this.velocityX = targetVX;
+            }
+
+            // Wiatr (WorldDirector, world.js): znosi gracza w powietrzu proporcjonalnie do
+            // windForce - na ziemi bez efektu (skok jest jedynym oknem na kompensowanie go).
+            if (this.isJumping && typeof windForce !== 'undefined') {
+                this.velocityX += windForce * WIND_PUSH_FACTOR * timeScale;
+            }
+
             this.x += this.velocityX * timeScale;
 
             if (bounds) {

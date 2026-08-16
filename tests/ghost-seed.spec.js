@@ -9,7 +9,18 @@ test.describe('Seed w URL - determinizm spawnera', () => {
         async function collectSpawns(seed) {
             await page.goto(`/game-demo.html?seed=${seed}`);
             await page.waitForFunction(() => typeof gameState !== 'undefined' && gameState === 'menu');
-            await page.evaluate(() => {
+
+            // Wolamy updateEnemySpawner() bezposrednio, w JEDNYM synchronicznym
+            // page.evaluate() - NIE pelny updateGame(). Dwa powody: (1) realna petla gry
+            // (anime(), prawdziwy rAF) dziala caly czas w tle (patrz helpers.js) i ustawia
+            // globalny `timeScale` na podstawie prawdziwego, niereprodukowalnego timingu
+            // klatek - gdybysmy przepuscili to przez pelny updateGame(), ruch/kolizje graczа
+            // zalezalyby od tego timingu i przy odrobinie pecha gracz ginalby w jednej sesji a
+            // w drugiej nie, obcinajac dalsze spawny (przez co dlugosci sekwencji by sie
+            // rozjechaly, mimo ze same rng()-draws sa deterministyczne); (2) testujemy
+            // WYLACZNIE determinizm spawnera (updateEnemySpawner/spawnEnemy/pickEnemyType) -
+            // kolizje/hit-stop/WorldDirector to osobne mechanizmy, pokryte w innych testach.
+            return page.evaluate(() => {
                 window.__spawnLog = [];
                 const originalSpawnEnemy = window.spawnEnemy;
                 window.spawnEnemy = function () {
@@ -17,11 +28,19 @@ test.describe('Seed w URL - determinizm spawnera', () => {
                     const last = enemies[enemies.length - 1];
                     window.__spawnLog.push({ type: last.type, x: Math.round(last.x) });
                 };
-                window.startGame();
+
+                elapsedMs = 0;
+                enemies.length = 0;
+                enemySpawnTimer = 0;
+                enemySpawnInterval = randomSpawnInterval(getDifficulty(0));
+
+                for (let i = 0; i < 300; i++) {
+                    elapsedMs += 100; // ~30s symulowanego czasu gry - kilkanascie spawnow
+                    updateEnemySpawner(100, getDifficulty(elapsedMs));
+                }
+
+                return window.__spawnLog;
             });
-            await page.waitForFunction(() => gameState === 'playing');
-            await runFrames(page, 300, 100); // ~30s symulowanego czasu gry - kilkanascie spawnow
-            return page.evaluate(() => window.__spawnLog);
         }
 
         const seqA = await collectSpawns(123);

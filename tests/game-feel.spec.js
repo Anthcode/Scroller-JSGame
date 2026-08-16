@@ -25,6 +25,12 @@ test.describe('Game feel - stomp', () => {
             shakeTrauma = 0;
             impactParticles.length = 0;
             floatingTexts.length = 0;
+            // WorldDirector (world.js) mnoży wynik zależnie od pogody/pory dnia (dayTime=0 tuż
+            // po starcie liczy się jako "noc") - pinujemy neutralne warunki, żeby ten test mierzył
+            // samą wartość bazową stompu, nie zbieg okoliczności pogodowych.
+            weatherMode = 'none';
+            dayTime = 0.5;
+            windForce = 1;
 
             handlePlayerEnemyCollisions();
 
