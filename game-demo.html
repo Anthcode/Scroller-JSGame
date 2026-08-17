@@ -299,6 +299,13 @@
            onchange="daySpeed = parseFloat(this.value) / (60 * 60); updateSliderValue('dayspeed', this.value)">
     <span class="value-display" id="dayspeedValue">1.0</span>
   </div>
+
+  <div class="control-group">
+    <label>Temat:</label>
+    <select id="themeSelect" onchange="setTheme(this.value)">
+      <option value="classic">classic</option>
+    </select>
+  </div>
 </div>
 
 <!-- Panel statystyk -->

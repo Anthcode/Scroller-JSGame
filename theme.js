@@ -132,3 +132,104 @@ function validateThemeConfig(cfg) {
     assertEntityStates('enemies.ghost', cfg.enemies.ghost, ENEMY_STATE_CONTRACT);
     if (cfg.enemies.walkerFast) assertEntityStates('enemies.walkerFast', cfg.enemies.walkerFast, ENEMY_STATE_CONTRACT);
 }
+
+// ==== PODMIANA TEMATU W RUNTIME ====
+
+// Odbudowuje animator encji na nowym animData, zachowujac biezacy stan animacji (o ile
+// istnieje w nowym temacie) - podmiana skorki w trakcie biegu nie moze "teleportowac"
+// gracza do idle w polowie skoku.
+function rebuildAnimator(entity, animData) {
+    const prevState = entity.animator ? entity.animator.currentState : null;
+    entity.animator = new AnimatorController(animData);
+    if (prevState && animData.states[prevState]) {
+        entity.animator.play(prevState, { force: true });
+    }
+}
+
+// Synchroniczna, atomowa aplikacja ROZWIAZANEGO tematu (wszystkie obrazy juz zaladowane -
+// patrz resolveThemeImages). Wolana wylacznie w runtime (setTheme/testy), gdy player/
+// demoPlayer/ghostAnimator juz istnieja - stan poczatkowy (classic) kazdy plik buduje
+// sam z currentTheme przy parsowaniu.
+function applyTheme(theme) {
+    buildParallaxLayers(theme.layers);
+
+    Object.assign(PLAYER_ANIM_DATA, buildAnimData(theme.player));
+    rebuildAnimator(player, PLAYER_ANIM_DATA);
+    rebuildAnimator(demoPlayer, PLAYER_ANIM_DATA);
+    // Duch rekordu (ghost.js) dzieli animData gracza; null przed pierwszym startGame().
+    if (ghostAnimator) {
+        ghostAnimator = new AnimatorController(PLAYER_ANIM_DATA);
+    }
+
+    // walkerFast bez wlasnego wpisu = grafika walkera (tint/rozmiar robia reszte, enemy.js).
+    const enemyCfgs = theme.enemies.walkerFast
+        ? theme.enemies
+        : { ...theme.enemies, walkerFast: theme.enemies.walker };
+    for (const type of ['walker', 'walkerFast', 'ghost']) {
+        ENEMY_TYPES[type].animData = buildAnimData(enemyCfgs[type]);
+    }
+    // Zywi wrogowie celowo NIE dostaja nowego animatora - dokanczaja zycie ze stara
+    // grafika, nowe spawny (new Enemy -> ENEMY_TYPES) biora nowa (spec §2.5).
+
+    DAY_PHASES = theme.dayPhases || CLASSIC_DAY_PHASES;
+    currentTheme = theme;
+}
+
+function loadImage(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`nie wczytano obrazka: ${src}`));
+        img.src = src;
+    });
+}
+
+// Zamienia wpisy z nazwami plikow (theme.json trzyma sciezki wzgledem katalogu tematu)
+// na wpisy z preladowanymi obiektami Image - dopiero komplet pozwala na atomowa podmiane
+// bez stanu "w polowie zaladowane" (spec §2.5).
+async function resolveThemeImages(cfg, baseUrl) {
+    const layers = await Promise.all(cfg.layers.map(async l => ({
+        image: await loadImage(baseUrl + l.file),
+        xspeed: l.xspeed,
+        role: l.role || null
+    })));
+    const resolveEntity = async (e) => ({
+        image: await loadImage(baseUrl + e.sheet),
+        frameWidth: e.frameWidth,
+        frameHeight: e.frameHeight,
+        states: e.states,
+        initialState: e.initialState || 'idle'
+    });
+    const player = await resolveEntity(cfg.player);
+    const enemies = {};
+    for (const [type, entityCfg] of Object.entries(cfg.enemies)) {
+        enemies[type] = await resolveEntity(entityCfg);
+    }
+    return { name: cfg.name, layers, player, enemies, dayPhases: cfg.dayPhases || null };
+}
+
+// Ladowanie tematu po nazwie: classic bez sieci (bundlowany), reszta przez fetch
+// theme.json + preload obrazow. KAZDY blad (404, zly JSON, brak stanu, brak obrazka)
+// konczy sie fallbackiem do classic i false - gra nigdy nie zostaje bez grafiki.
+async function setTheme(name) {
+    if (name === 'classic') {
+        applyTheme(THEME_DEFAULTS);
+        currentThemeName = 'classic';
+        return true;
+    }
+    try {
+        const res = await fetch(`images/themes/${name}/theme.json`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const cfg = await res.json();
+        validateThemeConfig(cfg);
+        const theme = await resolveThemeImages(cfg, `images/themes/${name}/`);
+        applyTheme(theme);
+        currentThemeName = name;
+        return true;
+    } catch (err) {
+        console.warn(`ThemeManager: temat "${name}" odrzucony (${err.message}) - fallback do classic`);
+        applyTheme(THEME_DEFAULTS);
+        currentThemeName = 'classic';
+        return false;
+    }
+}

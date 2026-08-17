@@ -118,3 +118,10 @@ window.addEventListener('load', () => {
 // Uruchomienie animacji - przez requestAnimationFrame, żeby pierwszy timestamp
 // był spójny z kolejnymi (inaczej pierwsze obliczone deltaTime byłoby ogromne)
 requestAnimationFrame(anime);
+
+// ?theme=X w URL laduje temat na starcie (po zaladowaniu wszystkich skryptow - applyTheme
+// dotyka player/demoPlayer, ktore powstaja wyzej w tym pliku i w game.js).
+(function initThemeFromUrl() {
+    const themeParam = new URLSearchParams(location.search).get('theme');
+    if (themeParam && themeParam !== 'classic') setTheme(themeParam);
+})();
