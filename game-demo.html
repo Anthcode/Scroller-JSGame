@@ -321,9 +321,10 @@
   <button onclick="copySeedToClipboard()">Kopiuj seed</button>
 </div>
 
-<!-- Kolejność ma znaczenie: core.js (canvas/stałe) najpierw, potem animator i klasy
-     encji, game.js (stan/wynik/HUD) przed bootstrapem, który je wszystkie spina. -->
+<!-- Kolejność ma znaczenie: core.js (canvas/stałe) najpierw, potem theme (grafika),
+     animator i klasy encji, game.js (stan/wynik/HUD) przed bootstrapem, który je wszystkie spina. -->
 <script src="core.js"></script>
+<script src="theme.js"></script>
 <script src="feel.js"></script>
 <script src="animatorController.js"></script>
 <script src="world.js"></script>
