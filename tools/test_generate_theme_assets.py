@@ -8,6 +8,12 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
 from generate_theme_assets import load_manifest, build_prompt, select_entries
+from PIL import Image
+from generate_theme_assets import (
+    slice_grid, trim_and_center, compose_player_sheet, compose_enemy_sheet,
+    make_tileable, process_background, validate_sheet, validate_ground,
+    PLAYER_ROW_ORDER, ENEMY_ROW_ORDER,
+)
 
 MANIFEST_FIXTURE = {
     "themes": {
@@ -69,6 +75,92 @@ class ManifestTest(unittest.TestCase):
         sel = select_entries(MANIFEST_FIXTURE, ["dusty_bg_sky"])
         self.assertEqual([e["id"] for e in sel], ["dusty_bg_sky"])
         self.assertEqual(len(select_entries(MANIFEST_FIXTURE, None)), 2)
+
+def kolorowa_klatka(color, size=(100, 100), box=(20, 30, 70, 80)):
+    """Przezroczysta klatka z kolorowym prostokatem - synteza 'postaci' z marginesem."""
+    img = Image.new("RGBA", size, (0, 0, 0, 0))
+    blok = Image.new("RGBA", (box[2] - box[0], box[3] - box[1]), color)
+    img.paste(blok, (box[0], box[1]))
+    return img
+
+class SliceTrimTest(unittest.TestCase):
+    def test_slice_grid_tnie_rowno_row_major(self):
+        grid = Image.new("RGBA", (200, 100))
+        grid.paste(kolorowa_klatka((255, 0, 0, 255), (100, 100)), (0, 0))
+        grid.paste(kolorowa_klatka((0, 255, 0, 255), (100, 100)), (100, 0))
+        frames = slice_grid(grid, 2, 1)
+        self.assertEqual(len(frames), 2)
+        self.assertEqual(frames[0].size, (100, 100))
+        self.assertEqual(frames[0].getpixel((45, 55))[:3], (255, 0, 0))
+        self.assertEqual(frames[1].getpixel((45, 55))[:3], (0, 255, 0))
+
+    def test_trim_and_center_normalizuje_wypelnienie(self):
+        frame = kolorowa_klatka((0, 0, 255, 255))
+        out = trim_and_center(frame, 128, fill_ratio=0.75)
+        self.assertEqual(out.size, (128, 128))
+        bbox = out.getbbox()
+        w = bbox[2] - bbox[0]; h = bbox[3] - bbox[1]
+        self.assertAlmostEqual(max(w, h), int(128 * 0.75), delta=2)  # skala znormalizowana
+        cx = (bbox[0] + bbox[2]) / 2
+        self.assertAlmostEqual(cx, 64, delta=2)                       # wysrodkowana
+
+class ComposeTest(unittest.TestCase):
+    def test_compose_player_sheet_uklad_wierszy_i_lustro(self):
+        run = [kolorowa_klatka((0, 255, 0, 255), box=(10, 30, 40, 80)) for _ in range(8)]
+        frames = {"idle": [kolorowa_klatka((255, 0, 0, 255))] * 6, "run": run,
+                  "jump": [kolorowa_klatka((0, 0, 255, 255))] * 6,
+                  "hit": [kolorowa_klatka((255, 255, 0, 255))] * 4,
+                  "death": [kolorowa_klatka((255, 0, 255, 255))] * 8}
+        sheet = compose_player_sheet(frames, 128)
+        self.assertEqual(sheet.size, (128 * 8, 128 * 6))  # max 8 klatek x 6 wierszy
+        # wiersz 1 = move-left (lustro run), wiersz 2 = move-right (run bez zmian):
+        left_row = sheet.crop((0, 128, 128, 256))
+        right_row = sheet.crop((0, 256, 128, 384))
+        lb, rb = left_row.getbbox(), right_row.getbbox()
+        # asymetryczny blok (10..40 z lewej) po lustrze laduje po prawej stronie klatki
+        self.assertNotEqual(lb[0], rb[0])
+
+    def test_compose_enemy_sheet_idle_z_pierwszej_klatki_move(self):
+        frames = {"move": [kolorowa_klatka((0, 255, 0, 255))] * 6,
+                  "hit": [kolorowa_klatka((255, 255, 0, 255))] * 4,
+                  "death": [kolorowa_klatka((255, 0, 255, 255))] * 6}
+        sheet = compose_enemy_sheet(frames, 128)
+        self.assertEqual(sheet.size, (128 * 6, 128 * 4))
+        idle = sheet.crop((0, 0, 128, 128))
+        move0 = sheet.crop((0, 128, 128, 256))
+        self.assertEqual(list(idle.getdata()), list(move0.getdata()))
+
+class BackgroundTest(unittest.TestCase):
+    def test_make_tileable_zszywa_krawedzie(self):
+        # lewa polowa czerwona, prawa niebieska - najgorszy przypadek szwu
+        img = Image.new("RGBA", (400, 100), (255, 0, 0, 255))
+        img.paste(Image.new("RGBA", (200, 100), (0, 0, 255, 255)), (200, 0))
+        out = make_tileable(img, blend_px=64)
+        self.assertEqual(out.size, (400, 100))
+        left = out.getpixel((0, 50)); right = out.getpixel((399, 50))
+        roznica = sum(abs(a - b) for a, b in zip(left[:3], right[:3]))
+        self.assertLess(roznica, 90)  # krawedzie zbiezne (bez blendu byloby ~510)
+
+    def test_process_background_kadruje_do_800x600(self):
+        img = Image.new("RGBA", (1536, 1024), (200, 150, 100, 255))
+        out = process_background(img)
+        self.assertEqual(out.size, (800, 600))
+
+class ValidateTest(unittest.TestCase):
+    def test_validate_sheet_wykrywa_pusta_klatke(self):
+        rows_spec = [("move", 2)]
+        sheet = Image.new("RGBA", (128 * 2, 128), (0, 0, 0, 0))
+        sheet.paste(kolorowa_klatka((0, 255, 0, 255), (128, 128)), (0, 0))  # klatka 1 pusta
+        with self.assertRaises(ValueError):
+            validate_sheet(sheet, 128, rows_spec)
+
+    def test_validate_ground_wymaga_krycia_w_pasie_gruntu(self):
+        ok = Image.new("RGBA", (800, 600), (0, 0, 0, 0))
+        ok.paste(Image.new("RGBA", (800, 116), (150, 100, 50, 255)), (0, 600 - 116))
+        validate_ground(ok, 116)  # nie rzuca
+        with self.assertRaises(ValueError):
+            validate_ground(Image.new("RGBA", (800, 600), (0, 0, 0, 0)), 116)
+
 
 if __name__ == "__main__":
     unittest.main()
