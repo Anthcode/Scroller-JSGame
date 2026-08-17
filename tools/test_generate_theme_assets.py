@@ -162,5 +162,55 @@ class ValidateTest(unittest.TestCase):
             validate_ground(Image.new("RGBA", (800, 600), (0, 0, 0, 0)), 116)
 
 
+import io
+
+class FakeImagesClient:
+    """Podstawka za OpenAI client - zwraca 1-kolorowy PNG zakodowany w b64."""
+    def __init__(self):
+        self.calls = []
+        class _Images:
+            def __init__(self, outer): self.outer = outer
+            def generate(self, **kwargs):
+                self.outer.calls.append(kwargs)
+                import base64
+                w, h = map(int, kwargs["size"].split("x"))
+                buf = io.BytesIO()
+                Image.new("RGBA", (w, h), (10, 200, 30, 255)).save(buf, "PNG")
+                class _Resp: pass
+                resp = _Resp()
+                datum = _Resp()
+                datum.b64_json = base64.b64encode(buf.getvalue()).decode()
+                resp.data = [datum]
+                resp.created = 1750000000
+                return resp
+        self.images = _Images(self)
+
+class GenerateEntryTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.log = os.path.join(self.tmp, "log.jsonl")
+        self.entry = MANIFEST_FIXTURE["assets"][0]
+        self.theme = MANIFEST_FIXTURE["themes"]["dusty-daylight"]
+
+    def test_generuje_raw_loguje_i_jest_idempotentny(self):
+        from generate_theme_assets import generate_entry
+        client = FakeImagesClient()
+        path = generate_entry(client, self.entry, self.theme, "gpt-image-2", self.tmp, self.log)
+        self.assertTrue(os.path.exists(path))
+        self.assertEqual(len(client.calls), 1)
+        self.assertEqual(client.calls[0]["model"], "gpt-image-2")
+        self.assertEqual(client.calls[0]["background"], "transparent")
+        with open(self.log, encoding="utf-8") as f:
+            rec = json.loads(f.readline())
+        self.assertEqual(rec["id"], "dusty_player_run")
+        self.assertIn("sha256", rec)
+        # drugi raz: raw istnieje -> zero wywolan API
+        generate_entry(client, self.entry, self.theme, "gpt-image-2", self.tmp, self.log)
+        self.assertEqual(len(client.calls), 1)
+        # force -> nowa generacja
+        generate_entry(client, self.entry, self.theme, "gpt-image-2", self.tmp, self.log, force=True)
+        self.assertEqual(len(client.calls), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

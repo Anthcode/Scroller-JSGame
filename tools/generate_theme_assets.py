@@ -12,9 +12,13 @@ Uruchamianie (z korzenia repo):
 Wymaga: pip install pillow openai; klucz w env OPENAI_API_KEY (poza --dry-run/--validate-only).
 """
 import argparse
+import base64
+import datetime
+import hashlib
 import json
 import os
 import sys
+import time
 
 try:
     from PIL import Image, ImageOps
@@ -203,6 +207,104 @@ def validate_ground(img, ground_top_px=116):
                          f"biegu nie pokryje GROUND_LINE_Y")
 
 
+def append_log(log_path, record):
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def generate_entry(client, entry, theme_cfg, model, raw_dir, log_path, force=False):
+    """Jedna generacja: prompt -> API -> raw PNG + wpis w logu. Idempotentna per id
+    (istniejacy raw = pomin, --force wymusza) - iteracje jakosci robi sie per wpis
+    (--only ID --force), nie regeneracja calosci (spec §3.3)."""
+    os.makedirs(raw_dir, exist_ok=True)
+    raw_path = os.path.join(raw_dir, f"{entry['id']}.png")
+    if os.path.exists(raw_path) and not force:
+        print(f"  [skip] {entry['id']} (raw istnieje, uzyj --force)")
+        return raw_path
+
+    prompt = build_prompt(entry, theme_cfg)
+    kwargs = {"model": model, "prompt": prompt, "size": entry["api_size"], "n": 1}
+    if entry.get("background") == "transparent":
+        kwargs["background"] = "transparent"
+
+    last_err = None
+    for attempt in range(3):
+        try:
+            resp = client.images.generate(**kwargs)
+            break
+        except Exception as err:  # retry z backoffem na chwilowe bledy API
+            last_err = err
+            wait = 2 ** attempt * 5
+            print(f"  [retry {attempt + 1}/3] {entry['id']}: {err} (czekam {wait}s)")
+            time.sleep(wait)
+    else:
+        raise SystemExit(f"Generacja {entry['id']} nieudana po 3 probach: {last_err}")
+
+    png = base64.b64decode(resp.data[0].b64_json)
+    with open(raw_path, "wb") as f:
+        f.write(png)
+    append_log(log_path, {
+        "id": entry["id"],
+        "model": model,
+        "prompt": prompt,
+        "api_size": entry["api_size"],
+        "response_id": getattr(resp, "id", None) or getattr(resp, "created", None),
+        "sha256": hashlib.sha256(png).hexdigest(),
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    })
+    print(f"  [ok] {entry['id']} -> {os.path.relpath(raw_path, REPO_ROOT)}")
+    return raw_path
+
+
+def _sheet_frames(raw_dir, entries, entity):
+    """Kroi rawy spritesheetow encji na znormalizowane klatki per akcja."""
+    frames_by_action = {}
+    frame_size = None
+    for e in entries:
+        if e["kind"] != "spritesheet" or e["entity"] != entity:
+            continue
+        frame_size = e["frame_size"]
+        raw = Image.open(os.path.join(raw_dir, f"{e['id']}.png"))
+        cols, rows = e["grid"]
+        cells = slice_grid(raw, cols, rows)[: e["frame_count"]]
+        frames_by_action[e["action"]] = [trim_and_center(c, frame_size) for c in cells]
+    return frames_by_action, frame_size
+
+
+def build_theme_outputs(manifest, theme_name, raw_dir, out_dir):
+    """Sklada finalne pliki tematu z rawow + walidacje (spec §3.3 pkt 4-6)."""
+    os.makedirs(out_dir, exist_ok=True)
+    entries = [e for e in manifest["assets"] if e["theme"] == theme_name]
+
+    player_frames, fs = _sheet_frames(raw_dir, entries, "player")
+    sheet = compose_player_sheet(player_frames, fs)
+    validate_sheet(sheet, fs, [("idle", len(player_frames["idle"])),
+                               ("move-left", len(player_frames["run"])),
+                               ("move-right", len(player_frames["run"])),
+                               ("jump", len(player_frames["jump"])),
+                               ("hit", len(player_frames["hit"])),
+                               ("death", len(player_frames["death"]))])
+    sheet.save(os.path.join(out_dir, "player.png"))
+
+    for entity, filename in (("walker", "enemy.png"), ("ghost", "ghost.png")):
+        frames, fs = _sheet_frames(raw_dir, entries, entity)
+        sheet = compose_enemy_sheet(frames, fs)
+        validate_sheet(sheet, fs, [("idle", 1), ("move", len(frames["move"])),
+                                   ("hit", len(frames["hit"])),
+                                   ("death", len(frames["death"]))])
+        sheet.save(os.path.join(out_dir, filename))
+
+    for e in entries:
+        if e["kind"] != "background":
+            continue
+        raw = Image.open(os.path.join(raw_dir, f"{e['id']}.png"))
+        out = process_background(raw)
+        if "ground_top_px" in e:
+            validate_ground(out, e["ground_top_px"])
+        out.save(os.path.join(out_dir, e["output_file"]))
+    print(f"Wyjscia tematu '{theme_name}' zapisane do {os.path.relpath(out_dir, REPO_ROOT)}")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--manifest", default=DEFAULT_MANIFEST)
@@ -224,7 +326,26 @@ def main(argv=None):
             print()
         return 0
 
-    raise SystemExit("Generacja/walidacja dochodzi w Taskach 6-7 tego planu.")
+    theme_names = sorted({e["theme"] for e in entries})
+
+    if args.validate_only:
+        for name in theme_names:
+            out_dir = os.path.join(REPO_ROOT, "images", "themes", name)
+            build_theme_outputs(manifest, name, RAW_DIR, out_dir)
+        return 0
+
+    # Realna generacja - klucz i klient tworzone dopiero tutaj (testy wstrzykuja Fake).
+    if not os.environ.get("OPENAI_API_KEY"):
+        raise SystemExit("Brak OPENAI_API_KEY w srodowisku (albo uzyj --dry-run).")
+    from openai import OpenAI
+    client = OpenAI()
+    for entry in entries:
+        generate_entry(client, entry, manifest["themes"][entry["theme"]],
+                       args.model, RAW_DIR, LOG_PATH, force=args.force)
+    for name in theme_names:
+        out_dir = os.path.join(REPO_ROOT, "images", "themes", name)
+        build_theme_outputs(manifest, name, RAW_DIR, out_dir)
+    return 0
 
 
 if __name__ == "__main__":
