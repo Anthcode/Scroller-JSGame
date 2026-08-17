@@ -104,6 +104,62 @@ class SliceTrimTest(unittest.TestCase):
         cx = (bbox[0] + bbox[2]) / 2
         self.assertAlmostEqual(cx, 64, delta=2)                       # wysrodkowana
 
+class GroupNormalizationTest(unittest.TestCase):
+    """Regresja po final-review: trim_and_center liczyl skale per-klatka, wiec postac
+    'pulsowala' rozmiarem miedzy klatkami animacji (model AI nie trzyma idealnie tej
+    samej odleglosci kadru) i byla centrowana zamiast stac na dole klatki jak w silniku
+    (GROUND_LINE_Y). Poprawka: jedna wspolna skala z calego zestawu klatek encji +
+    wyrownanie do dolu dla postaci naziemnych."""
+
+    def test_compute_group_scale_uzywa_najwiekszego_wymiaru_z_calego_zestawu(self):
+        from generate_theme_assets import compute_group_scale
+        maly = kolorowa_klatka((255, 0, 0, 255), box=(40, 40, 60, 60))   # tresc 20x20
+        duzy = kolorowa_klatka((0, 255, 0, 255), box=(10, 10, 90, 90))   # tresc 80x80
+        scale = compute_group_scale([maly, duzy], 128, fill_ratio=0.75)
+        # skala liczona z NAJWIEKSZEGO wymiaru w calym zestawie (80px), nie per klatka
+        self.assertAlmostEqual(scale, (128 * 0.75) / 80, places=3)
+
+    def test_trim_and_center_z_podana_skala_nie_liczy_wlasnej(self):
+        frame = kolorowa_klatka((0, 0, 255, 255), box=(40, 40, 60, 60))  # tresc 20x20
+        out = trim_and_center(frame, 128, scale=2.0)  # wymuszona skala
+        bbox = out.getbbox()
+        w = bbox[2] - bbox[0]
+        # tresc 20px * scale 2.0 = 40px (nie 128*0.78~100px, jak przy autoskali)
+        self.assertAlmostEqual(w, 40, delta=2)
+
+    def test_trim_and_center_align_bottom_wyrownuje_do_dolu(self):
+        frame = kolorowa_klatka((0, 0, 255, 255))
+        out = trim_and_center(frame, 128, fill_ratio=0.75, align="bottom")
+        bbox = out.getbbox()
+        self.assertAlmostEqual(bbox[3], 128, delta=1)  # dolna krawedz tresci przy dole klatki
+
+    def test_sheet_frames_stosuje_wspolna_skale_i_wyrownanie_do_dolu(self):
+        from generate_theme_assets import _sheet_frames
+        tmp = tempfile.mkdtemp()
+        maly = kolorowa_klatka((255, 0, 0, 255), size=(200, 200), box=(90, 90, 110, 110))   # tresc 20x20
+        duzy = kolorowa_klatka((0, 255, 0, 255), size=(200, 200), box=(10, 10, 190, 190))   # tresc 180x180
+        maly.save(os.path.join(tmp, "e_a.png"))
+        duzy.save(os.path.join(tmp, "e_b.png"))
+        entries = [
+            {"id": "e_a", "kind": "spritesheet", "entity": "walker", "action": "idle",
+             "frame_count": 1, "grid": [1, 1], "frame_size": 128},
+            {"id": "e_b", "kind": "spritesheet", "entity": "walker", "action": "move",
+             "frame_count": 1, "grid": [1, 1], "frame_size": 128},
+        ]
+        frames_by_action, fs = _sheet_frames(tmp, entries, "walker")
+        idle_bbox = frames_by_action["idle"][0].getbbox()
+        move_bbox = frames_by_action["move"][0].getbbox()
+        idle_w = idle_bbox[2] - idle_bbox[0]
+        move_w = move_bbox[2] - move_bbox[0]
+        # wspolna skala liczona z najwiekszej tresci w zestawie (180px, z 'move') -
+        # 'idle' (20px) zeskalowany TA SAMA skala wychodzi znacznie mniejszy, nie
+        # dostaje wlasnej (wiekszej) skali jak przy normalizacji per-klatka
+        self.assertLess(idle_w, move_w / 2)
+        # oba wyrownane do dolu klatki (GROUND_LINE_Y w silniku):
+        self.assertAlmostEqual(idle_bbox[3], fs, delta=1)
+        self.assertAlmostEqual(move_bbox[3], fs, delta=1)
+
+
 class ComposeTest(unittest.TestCase):
     def test_compose_player_sheet_uklad_wierszy_i_lustro(self):
         run = [kolorowa_klatka((0, 255, 0, 255), box=(10, 30, 40, 80)) for _ in range(8)]
