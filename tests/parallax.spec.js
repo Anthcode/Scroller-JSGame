@@ -17,12 +17,12 @@ test.describe('Paralaksa', () => {
         await page.waitForFunction(() => gameState === 'gameover');
         expect(await page.evaluate(() => worldSpeed)).toBe(0);
 
-        // layer1.update() jest wolane z realnej petli anime() (script.js), nie z updateGame() -
+        // groundLayer.update() jest wolane z realnej petli anime() (script.js), nie z updateGame() -
         // trzeba wiec dac prawdziwemu rAF chwile na przejscie kilku klatek, nie symulowac ich
         // recznie przez runFrames (ktore dotyka tylko updateGame()).
-        const before = await page.evaluate(() => layer1.x);
+        const before = await page.evaluate(() => groundLayer.x);
         await page.waitForTimeout(300);
-        const after = await page.evaluate(() => layer1.x);
+        const after = await page.evaluate(() => groundLayer.x);
         expect(after).toBe(before);
     });
 
@@ -38,13 +38,13 @@ test.describe('Paralaksa', () => {
             worldSpeed = 4;
             gamespeed = 1;
             timeScale = 1;
-            layer1.update(); // grunt, xspeed 1.0
-            layer6.update(); // dalekie wzgorza, xspeed 0.2
-            return { layer1: layer1.speed, layer6: layer6.speed };
+            groundLayer.update();  // grunt, xspeed 1.0
+            midLayers[0].update(); // dalekie wzgorza, xspeed 0.2
+            return { ground: groundLayer.speed, farHills: midLayers[0].speed };
         });
-        expect(speeds.layer1).toBeGreaterThan(speeds.layer6);
-        // Regresja: layer1 kiedys dostawal blednie gamespeed jako mnoznik (predkosc do kwadratu)
-        // zamiast stalej analogicznej do reszty warstw - przy worldSpeed=4 powinno byc dokladnie 4.
-        expect(speeds.layer1).toBeCloseTo(4, 5);
+        expect(speeds.ground).toBeGreaterThan(speeds.farHills);
+        // Regresja PR #18: grunt dostawal kiedys gamespeed jako mnoznik (predkosc do kwadratu)
+        // zamiast stalej - przy worldSpeed=4 i xspeed=1.0 ma byc dokladnie 4.
+        expect(speeds.ground).toBeCloseTo(4, 5);
     });
 });

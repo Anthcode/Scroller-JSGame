@@ -27,8 +27,9 @@ function anime(timestamp = 0) {
   ctx.save();
   ctx.translate(shakeOffset.x, shakeOffset.y);
 
-  layer11.update();
-  layer11.draw();
+  // Warstwa nieba (xspeed 0) pierwsza - na nia nakladaja sie overlay dnia/nocy i ciala niebieskie.
+  skyLayer.update();
+  skyLayer.draw();
 
   const prevDayTime = dayTime;
   dayTime = (dayTime + daySpeed * gamespeed * timeScale) % 1;
@@ -39,27 +40,19 @@ function anime(timestamp = 0) {
   drawStars();
   drawSunMoon();
 
-  layer6.update();
-  layer6.draw();
+  // Warstwy posrednie w kolejnosci definicji tematu (daleka -> bliska).
+  for (const layer of midLayers) {
+    layer.update();
+    layer.draw();
+  }
 
-  layer5.update();
-  layer5.draw();
-
-  layer4.update();
-  layer4.draw();
-
-  layer3.update();
-  layer3.draw();
-
-  layer2.update();
-  layer2.draw();
-
-  // SYSTEM CZĄSTECZEK - rysowany przed pierwszą warstwą. deltaTime potrzebny WYŁĄCZNIE do
-  // odliczania crossfade'u WorldDirectora (world.js), zwykłe cząsteczki nadal używają timeScale.
+  // SYSTEM CZĄSTECZEK - rysowany przed warstwa gruntu (jak dotychczas przed layer1). deltaTime
+  // potrzebny WYŁĄCZNIE do odliczania crossfade'u WorldDirectora (world.js), zwykłe cząsteczki
+  // nadal używają timeScale.
   updateParticleSystem(deltaTime);
 
-  layer1.update();
-  layer1.draw();
+  groundLayer.update();
+  groundLayer.draw();
 
   // ROZGRYWKA (spawner, wrogowie, gracz, kolizje/stomp, wynik, trudność) - game.js.
   // Tło i pogoda żyją zawsze; sama rozgrywka jest aktywna tylko w stanie 'playing'.

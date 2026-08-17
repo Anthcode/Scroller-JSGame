@@ -16,7 +16,7 @@ const stars = Array.from({ length: STAR_COUNT }, () => ({
     twinkle: Math.random() * Math.PI * 2
 }));
 
-const DAY_PHASES = [
+const CLASSIC_DAY_PHASES = [
     { t: 0.000, r: 10,  g: 10,  b: 60,  a: 0.72 },
     { t: 0.125, r: 20,  g: 15,  b: 70,  a: 0.65 },
     { t: 0.250, r: 210, g: 100, b: 60,  a: 0.35 },
@@ -27,21 +27,8 @@ const DAY_PHASES = [
     { t: 0.875, r: 40,  g: 20,  b: 80,  a: 0.60 },
     { t: 1.000, r: 10,  g: 10,  b: 60,  a: 0.72 },
 ];
-
-const back1 = new Image();
-back1.src = 'images/_01_ground.png';
-const back2 = new Image();
-back2.src = 'images/_02_trees and bushes.png';
-const back3 = new Image();
-back3.src = 'images/_03_distant_trees.png';
-const back4 = new Image();
-back4.src = 'images/_04_bushes.png';
-const back5 = new Image();
-back5.src = 'images/_05_hill1.png';
-const back6 = new Image();
-back6.src = 'images/_06_hill2.png';
-const back11 = new Image();
-back11.src = 'images/_11_background.png';
+// let, bo applyTheme (theme.js) podmienia palete na dayPhases tematu (lub przywraca classic).
+let DAY_PHASES = CLASSIC_DAY_PHASES;
 
 class Layers {
   constructor(image, xspeed) {
@@ -80,16 +67,36 @@ class Layers {
   }
 }
 
-// xspeed=1.0 dla najbliższej warstwy (grunt) - wcześniej był tu błędnie przekazywany
-// "gamespeed" jako mnożnik (zamiast stałej analogicznej do 0.8/0.6/0.46/0.3/0.2 reszty),
-// więc grunt jechał z prędkością podniesioną do kwadratu względem pozostałych warstw.
-const layer1 = new Layers(back1, 1.0);
-const layer2 = new Layers(back2, 0.8);
-const layer3 = new Layers(back3, 0.6);
-const layer4 = new Layers(back4, 0.46);
-const layer5 = new Layers(back5, 0.3);
-const layer6 = new Layers(back6, 0.2);
-const layer11 = new Layers(back11, 0);
+// ==== WARSTWY PARALAKSY Z TEMATU ====
+// Zamiast hardkodowanych layer1..layer11 - tablica budowana z definicji aktywnego tematu
+// (theme.js). Kolejnosc wpisow = kolejnosc rysowania (daleka -> bliska); role "sky" i
+// "ground" wyznaczaja punkty wpiecia overlaya dnia/nocy i czasteczek pogody w anime()
+// (script.js). xspeed=1.0 dla gruntu - stala jak pozostale mnozniki (regresja PR #18:
+// kiedys byl tu gamespeed, przez co grunt jechal z predkoscia do kwadratu).
+let parallaxLayers = [];
+let skyLayer = null;
+let groundLayer = null;
+let midLayers = [];
+
+function buildParallaxLayers(layerDefs) {
+    parallaxLayers = layerDefs.map(def => {
+        let image = def.image;
+        if (!image) {
+            // Sciezka (classic) - Image laduje sie w tle jak dotychczasowe back1..back11;
+            // fetchowane tematy przychodza tu juz z preladowanym def.image (theme.js).
+            image = new Image();
+            image.src = def.src || def.file;
+        }
+        const layer = new Layers(image, def.xspeed);
+        layer.role = def.role || null;
+        return layer;
+    });
+    skyLayer = parallaxLayers.find(l => l.role === 'sky');
+    groundLayer = parallaxLayers.find(l => l.role === 'ground');
+    midLayers = parallaxLayers.filter(l => l.role === null);
+}
+
+buildParallaxLayers(currentTheme.layers);
 
 function getDayColor(t) {
     let lo = DAY_PHASES[0], hi = DAY_PHASES[DAY_PHASES.length - 1];

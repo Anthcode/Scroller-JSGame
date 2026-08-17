@@ -44,4 +44,18 @@ test.describe('ThemeManager: classic + walidacja', () => {
         });
         expect(ok).toBe(true);
     });
+
+    test('warstwy classic zbudowane z THEME_DEFAULTS (role sky/ground, xspeed)', async ({ page }) => {
+        await gotoGame(page);
+        const layers = await page.evaluate(() => ({
+            count: parallaxLayers.length,
+            skySpeed: skyLayer.xspeed,
+            groundSpeed: groundLayer.xspeed,
+            midSpeeds: midLayers.map(l => l.xspeed)
+        }));
+        expect(layers.count).toBe(7);
+        expect(layers.skySpeed).toBe(0);
+        expect(layers.groundSpeed).toBe(1.0);
+        expect(layers.midSpeeds).toEqual([0.2, 0.3, 0.46, 0.6, 0.8]);
+    });
 });
