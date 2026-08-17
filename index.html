@@ -126,7 +126,7 @@
 <body>
 <div class="stage">
   <div class="card">
-    <iframe id="gameFrame" src="game-demo.html" title="Podgląd gry"></iframe>
+    <iframe id="gameFrame" src="game-demo.html" title="Podgląd gry" allow="fullscreen"></iframe>
     <img class="frame-art" src="images/parallax-frame-cutout.png" alt="">
     <div id="livesHud" class="lives-hud">
       <div class="heart-slot"></div>
@@ -189,11 +189,20 @@
       // dałoby się tam odróżnić trybów bez zdublowania tej decyzji na podstawie złego viewportu.
       if (!isDesktopFramed()) {
         try { gameFrame.contentDocument.documentElement.classList.add('fullscreen'); } catch (e) {}
+        // Natywny Fullscreen API na #gameFrame (element w TYM dokumencie, nie wewnątrz
+        // iframe'a) - chowa pasek adresu przeglądarki na urządzeniach, które to wspierają
+        // (Android Chrome). Wywołanie musi nastąpić w tym samym geście użytkownika co klik
+        // #playHit, inaczej przeglądarka je odrzuci. Na iPhone Safari requestFullscreen()
+        // dla zwykłych elementów zwykle istnieje, ale odrzuca Promise - .catch() to łyka,
+        // więc gra po cichu zostaje przy powyższym CSS-owym "fill viewport", które już działa
+        // wszędzie. `?.()` na wypadek przeglądarek bez tej metody w ogóle.
+        gameFrame.requestFullscreen?.().catch(() => {});
       }
     }, 50);
   });
 
   backBtn.addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
     gameFrame.classList.remove('playing');
     playHit.classList.remove('hidden');
     backBtn.classList.remove('visible');
