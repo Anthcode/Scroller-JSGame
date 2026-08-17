@@ -1,0 +1,30 @@
+{
+  "themes": {
+    "dusty-daylight": {
+      "style_skeleton": "flat vector illustration, clean bold outlines, subtle gradients, cel shading, 2D side-view mobile game asset, consistent top-left lighting, no text, no watermark, no border",
+      "world": "sun-bleached desert canyon in warm golden daylight, dusty orange rock formations, sparse dry scrub",
+      "palette": ["#E8A33D", "#C96F2B", "#7A4A21", "#F5E6C8", "#4E7E9E"],
+      "character": "agile ninja runner in dark indigo outfit with flowing headband",
+      "enemy_walker": "round spiky ball creature with angry cartoon face, sandy yellow body",
+      "enemy_ghost": "translucent dusty desert spirit with trailing wispy tail"
+    }
+  },
+  "assets": [
+    { "id": "dusty_player_idle",  "theme": "dusty-daylight", "kind": "spritesheet", "entity": "player", "action": "idle",  "frame_count": 6, "grid": [3, 2], "frame_size": 256, "api_size": "1024x1024", "background": "transparent", "style_notes": "standing ready pose, subtle breathing bounce between frames" },
+    { "id": "dusty_player_run",   "theme": "dusty-daylight", "kind": "spritesheet", "entity": "player", "action": "run",   "frame_count": 8, "grid": [4, 2], "frame_size": 256, "api_size": "1024x1024", "background": "transparent", "style_notes": "dynamic running cycle, legs in different phases of stride" },
+    { "id": "dusty_player_jump",  "theme": "dusty-daylight", "kind": "spritesheet", "entity": "player", "action": "jump",  "frame_count": 6, "grid": [3, 2], "frame_size": 256, "api_size": "1024x1024", "background": "transparent", "style_notes": "jump arc: crouch, launch, apex, falling, landing" },
+    { "id": "dusty_player_hit",   "theme": "dusty-daylight", "kind": "spritesheet", "entity": "player", "action": "hit",   "frame_count": 4, "grid": [2, 2], "frame_size": 256, "api_size": "1024x1024", "background": "transparent", "style_notes": "recoiling from a hit, flinching backwards" },
+    { "id": "dusty_player_death", "theme": "dusty-daylight", "kind": "spritesheet", "entity": "player", "action": "death", "frame_count": 8, "grid": [4, 2], "frame_size": 256, "api_size": "1024x1024", "background": "transparent", "style_notes": "collapsing to the ground, progressive fall" },
+    { "id": "dusty_walker_move",  "theme": "dusty-daylight", "kind": "spritesheet", "entity": "walker", "action": "move",  "frame_count": 6, "grid": [3, 2], "frame_size": 160, "api_size": "1024x1024", "background": "transparent", "style_notes": "rolling forward, spikes rotating between frames" },
+    { "id": "dusty_walker_hit",   "theme": "dusty-daylight", "kind": "spritesheet", "entity": "walker", "action": "hit",   "frame_count": 4, "grid": [2, 2], "frame_size": 160, "api_size": "1024x1024", "background": "transparent", "style_notes": "squashed and recoiling, pained expression" },
+    { "id": "dusty_walker_death", "theme": "dusty-daylight", "kind": "spritesheet", "entity": "walker", "action": "death", "frame_count": 6, "grid": [3, 2], "frame_size": 160, "api_size": "1024x1024", "background": "transparent", "style_notes": "deflating and crumbling to dust, progressive disintegration" },
+    { "id": "dusty_ghost_move",   "theme": "dusty-daylight", "kind": "spritesheet", "entity": "ghost",  "action": "move",  "frame_count": 6, "grid": [3, 2], "frame_size": 160, "api_size": "1024x1024", "background": "transparent", "style_notes": "floating undulation, tail waving between frames" },
+    { "id": "dusty_ghost_hit",    "theme": "dusty-daylight", "kind": "spritesheet", "entity": "ghost",  "action": "hit",   "frame_count": 4, "grid": [2, 2], "frame_size": 160, "api_size": "1024x1024", "background": "transparent", "style_notes": "dispersing slightly, startled expression" },
+    { "id": "dusty_ghost_death",  "theme": "dusty-daylight", "kind": "spritesheet", "entity": "ghost",  "action": "death", "frame_count": 4, "grid": [2, 2], "frame_size": 160, "api_size": "1024x1024", "background": "transparent", "style_notes": "fading out and dissolving into dust motes" },
+    { "id": "dusty_bg_sky",        "theme": "dusty-daylight", "kind": "background", "api_size": "1536x1024", "background": "opaque",      "output_file": "bg_sky.png",        "style_notes": "clear gradient desert sky, warm haze near horizon, few soft distant clouds, no ground" },
+    { "id": "dusty_bg_far_canyon", "theme": "dusty-daylight", "kind": "background", "api_size": "1536x1024", "background": "transparent", "output_file": "bg_far_canyon.png", "style_notes": "distant canyon mesa silhouettes in lower half, hazy atmospheric perspective, empty transparent sky above" },
+    { "id": "dusty_bg_mid_mesas",  "theme": "dusty-daylight", "kind": "background", "api_size": "1536x1024", "background": "transparent", "output_file": "bg_mid_mesas.png",  "style_notes": "mid-distance rock formations and mesas in lower half, sharper than background, empty transparent sky above" },
+    { "id": "dusty_bg_near_scrub", "theme": "dusty-daylight", "kind": "background", "api_size": "1536x1024", "background": "transparent", "output_file": "bg_near_scrub.png", "style_notes": "near-ground dry bushes, cacti and rocks along the bottom third, empty transparent area above" },
+    { "id": "dusty_bg_ground",     "theme": "dusty-daylight", "kind": "background", "api_size": "1536x1024", "background": "transparent", "output_file": "bg_ground.png",     "ground_top_px": 116, "style_notes": "flat walkable desert ground strip along the bottom edge, top surface of the ground at about 1/5 of image height from the bottom, cracked dry earth texture, empty transparent area above" }
+  ]
+}
