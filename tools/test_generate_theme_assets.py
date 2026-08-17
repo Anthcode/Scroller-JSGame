@@ -104,6 +104,43 @@ class SliceTrimTest(unittest.TestCase):
         cx = (bbox[0] + bbox[2]) / 2
         self.assertAlmostEqual(cx, 64, delta=2)                       # wysrodkowana
 
+def zaszumiona_klatka(color, size=(200, 200), box=(90, 90, 110, 110), noise_at=(2, 2), noise_alpha=3):
+    """Jak kolorowa_klatka, ale z pojedynczym niemal-przezroczystym pikselem daleko
+    od tresci - symuluje szum brzegowy z generacji AI (bardzo niskie alpha, nie
+    zero), ktory potrafil zawyzac Image.getbbox() o setki pikseli."""
+    img = kolorowa_klatka(color, size, box)
+    img.putpixel(noise_at, (*color[:3], noise_alpha))
+    return img
+
+
+class ContentBboxTest(unittest.TestCase):
+    """Regresja: PIL Image.getbbox() liczy KAZDY piksel o alpha>0 jako tresc, wiec
+    pojedynczy niemal-niewidoczny piksel szumu (alpha=2-3) daleko od prawdziwej
+    tresci potrafil zawyzyc bbox o setki pikseli (znalezione przy realnej generacji
+    dusty-daylight: bbox 433px wysokosci, z czego tylko ~78px bylo faktycznie
+    widoczne, reszta to szum <alpha 21>). compute_group_scale/trim_and_center musza
+    liczyc bbox z progiem alpha, nie surowym getbbox()."""
+
+    def test_szumowy_piksel_nie_zawyza_group_scale(self):
+        from generate_theme_assets import compute_group_scale
+        czysta = kolorowa_klatka((255, 0, 0, 255))                 # tresc 50x50 (box domyslny)
+        zaszumiona = zaszumiona_klatka((0, 255, 0, 255))            # tresc 20x20 + szum daleko
+        scale_bez_szumu = compute_group_scale([czysta], 128, fill_ratio=0.75)
+        scale_z_szumem = compute_group_scale([czysta, zaszumiona], 128, fill_ratio=0.75)
+        # szumowy piksel (alpha=3, daleko od tresci) nie powinien zmienic skali,
+        # bo prawdziwa tresc zaszumionej klatki jest MNIEJSZA niz czystej (20 < 50)
+        self.assertAlmostEqual(scale_bez_szumu, scale_z_szumem, places=3)
+
+    def test_szumowy_piksel_nie_zawyza_wlasnego_trim(self):
+        zaszumiona = zaszumiona_klatka((0, 0, 255, 255))
+        out = trim_and_center(zaszumiona, 128, fill_ratio=0.75)
+        bbox = out.getbbox()
+        w = bbox[2] - bbox[0]
+        # bez progu alpha tresc (20px) zeskalowalaby sie razem z odleglym szumem,
+        # dajac dziwaczny, maly/przesuniety wynik; z progiem ma wypelnic ~75% klatki
+        self.assertAlmostEqual(w, int(128 * 0.75), delta=3)
+
+
 class GroupNormalizationTest(unittest.TestCase):
     """Regresja po final-review: trim_and_center liczyl skale per-klatka, wiec postac
     'pulsowala' rozmiarem miedzy klatkami animacji (model AI nie trzyma idealnie tej
@@ -133,7 +170,42 @@ class GroupNormalizationTest(unittest.TestCase):
         bbox = out.getbbox()
         self.assertAlmostEqual(bbox[3], 128, delta=1)  # dolna krawedz tresci przy dole klatki
 
-    def test_sheet_frames_stosuje_wspolna_skale_i_wyrownanie_do_dolu(self):
+    def test_sheet_frames_stosuje_wspolna_skale_w_ramach_jednej_akcji(self):
+        """Klatki TEJ SAMEJ akcji (np. 6 klatek 'move') dziela jedna skale - to
+        usuwa 'pulsowanie' rozmiaru w trakcie jednej animacji (regresja z final
+        review). Skala liczona per-akcja, nie per-cala-postac (patrz test nizej) -
+        inaczej jedna akcja z duzymi efektami FX (np. 'hit' z iskrami) zanizalaby
+        skale wszystkich pozostalych akcji tej postaci."""
+        from generate_theme_assets import _sheet_frames
+        tmp = tempfile.mkdtemp()
+        maly = kolorowa_klatka((255, 0, 0, 255), size=(200, 200), box=(90, 90, 110, 110))   # tresc 20x20
+        duzy = kolorowa_klatka((0, 255, 0, 255), size=(200, 200), box=(10, 10, 190, 190))   # tresc 180x180
+        grid = Image.new("RGBA", (400, 200), (0, 0, 0, 0))
+        grid.paste(maly, (0, 0))
+        grid.paste(duzy, (200, 0))
+        grid.save(os.path.join(tmp, "e_move.png"))
+        entries = [
+            {"id": "e_move", "kind": "spritesheet", "entity": "walker", "action": "move",
+             "frame_count": 2, "grid": [2, 1], "frame_size": 128},
+        ]
+        frames_by_action, fs = _sheet_frames(tmp, entries, "walker")
+        f0_bbox = frames_by_action["move"][0].getbbox()
+        f1_bbox = frames_by_action["move"][1].getbbox()
+        f0_w = f0_bbox[2] - f0_bbox[0]
+        f1_w = f1_bbox[2] - f1_bbox[0]
+        # wspolna skala liczona z najwiekszej tresci TEJ AKCJI (180px) - mala klatka
+        # (20px) zeskalowana ta sama skala wychodzi znacznie mniejsza, nie dostaje
+        # wlasnej (wiekszej) skali jak przy normalizacji per-klatka
+        self.assertLess(f0_w, f1_w / 2)
+        # oba wyrownane do dolu klatki (GROUND_LINE_Y w silniku):
+        self.assertAlmostEqual(f0_bbox[3], fs, delta=1)
+        self.assertAlmostEqual(f1_bbox[3], fs, delta=1)
+
+    def test_sheet_frames_kazda_akcja_ma_niezalezna_skale(self):
+        """Rozne akcje (np. 'idle' o skromnej tresci vs 'move' z duzymi efektami)
+        NIE dziela jednej skali - kazda normalizuje sie do wlasnego fill_ratio,
+        inaczej postac stojaca (idle) byłaby sztucznie pomniejszona przez efekty
+        FX z zupelnie innej animacji (np. iskry w 'hit')."""
         from generate_theme_assets import _sheet_frames
         tmp = tempfile.mkdtemp()
         maly = kolorowa_klatka((255, 0, 0, 255), size=(200, 200), box=(90, 90, 110, 110))   # tresc 20x20
@@ -151,10 +223,9 @@ class GroupNormalizationTest(unittest.TestCase):
         move_bbox = frames_by_action["move"][0].getbbox()
         idle_w = idle_bbox[2] - idle_bbox[0]
         move_w = move_bbox[2] - move_bbox[0]
-        # wspolna skala liczona z najwiekszej tresci w zestawie (180px, z 'move') -
-        # 'idle' (20px) zeskalowany TA SAMA skala wychodzi znacznie mniejszy, nie
-        # dostaje wlasnej (wiekszej) skali jak przy normalizacji per-klatka
-        self.assertLess(idle_w, move_w / 2)
+        target = int(fs * 0.78)
+        self.assertAlmostEqual(idle_w, target, delta=3)
+        self.assertAlmostEqual(move_w, target, delta=3)
         # oba wyrownane do dolu klatki (GROUND_LINE_Y w silniku):
         self.assertAlmostEqual(idle_bbox[3], fs, delta=1)
         self.assertAlmostEqual(move_bbox[3], fs, delta=1)

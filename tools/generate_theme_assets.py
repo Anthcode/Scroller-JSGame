@@ -94,15 +94,28 @@ def slice_grid(img, cols, rows):
             for r in range(rows) for c in range(cols)]
 
 
+def _content_bbox(frame, alpha_threshold=16):
+    """Bbox liczony z progiem alpha, NIE surowym Image.getbbox() - Image.getbbox()
+    liczy KAZDY piksel o alpha>0 jako tresc, a AI-generowane 'przezroczyste' PNG
+    czesto maja pojedyncze niemal-niewidoczne piksele szumu (alpha rzedu kilku, nie
+    zero) daleko od faktycznej postaci, ktore potrafia zawyzyc bbox o setki pikseli
+    (znalezione przy realnej generacji dusty-daylight: bbox 433px wysokosci klatki,
+    z czego tylko ~78px bylo faktycznie widoczne). Prog 16 = ten sam co w
+    validate_sheet, konsekwentna definicja 'widocznego' piksela w calym pliku."""
+    alpha = frame.convert("RGBA").getchannel("A")
+    mask = alpha.point(lambda a: 255 if a > alpha_threshold else 0)
+    return mask.getbbox()
+
+
 def compute_group_scale(frames, frame_size, fill_ratio=0.78):
-    """Liczy JEDNA skale dla calego zestawu klatek (np. wszystkich akcji jednej
-    postaci) z najwiekszego wymiaru tresci w calym zestawie - inaczej kazda klatka
+    """Liczy JEDNA skale dla calego zestawu klatek (np. wszystkich klatek jednej
+    akcji) z najwiekszego wymiaru tresci w calym zestawie - inaczej kazda klatka
     dostawalaby wlasna skale (model AI nie trzyma idealnie tej samej odleglosci
-    kadru miedzy klatkami/akcjami), co dawalo wrazenie 'pulsowania' rozmiaru postaci
-    miedzy klatkami animacji (regresja znaleziona w finalnym review)."""
+    kadru miedzy klatkami), co dawalo wrazenie 'pulsowania' rozmiaru postaci miedzy
+    klatkami animacji (regresja znaleziona w finalnym review)."""
     max_dim = 0
     for frame in frames:
-        bbox = frame.convert("RGBA").getbbox()
+        bbox = _content_bbox(frame)
         if bbox is None:
             raise ValueError("pusta klatka (same przezroczyste piksele)")
         max_dim = max(max_dim, bbox[2] - bbox[0], bbox[3] - bbox[1])
@@ -123,7 +136,7 @@ def trim_and_center(frame, frame_size, fill_ratio=0.78, scale=None, align="cente
     pionie, inaczej stopy 'unosza sie' nad hitboxem gdy tresc klatek rozni sie wysokoscia.
     """
     frame = frame.convert("RGBA")
-    bbox = frame.getbbox()
+    bbox = _content_bbox(frame)
     if bbox is None:
         raise ValueError("pusta klatka (same przezroczyste piksele)")
     content = frame.crop(bbox)
@@ -284,11 +297,13 @@ def generate_entry(client, entry, theme_cfg, model, raw_dir, log_path, force=Fal
 def _sheet_frames(raw_dir, entries, entity):
     """Kroi rawy spritesheetow encji na znormalizowane klatki per akcja.
 
-    Skala liczona WSPOLNIE z calego zestawu klatek encji (wszystkie akcje razem,
-    patrz compute_group_scale) i wyrownanie do dolu (align="bottom") - postac stoi
-    na GROUND_LINE_Y w silniku, wiec jedna wspolna skala + wyrownanie do dolu to
-    jedyny sposob, zeby nie 'pulsowala' rozmiarem i nie 'unosila sie' nad hitboxem
-    miedzy klatkami o roznej tresci (regresja znaleziona w finalnym review planu)."""
+    Skala liczona WSPOLNIE dla klatek TEJ SAMEJ akcji (patrz compute_group_scale) i
+    wyrownanie do dolu (align="bottom") - postac stoi na GROUND_LINE_Y w silniku,
+    wiec jedna wspolna skala w ramach akcji + wyrownanie do dolu to jedyny sposob,
+    zeby nie 'pulsowala' rozmiarem miedzy klatkami tej samej animacji (regresja
+    znaleziona w finalnym review planu). Skala liczona PER AKCJA, nie dla calej
+    postaci naraz - inaczej jedna akcja z duzymi efektami FX (np. iskry w 'hit')
+    zanizalaby skale wszystkich pozostalych, niepowiazanych akcji tej postaci."""
     cells_by_action = {}
     frame_size = None
     for e in entries:
@@ -298,12 +313,10 @@ def _sheet_frames(raw_dir, entries, entity):
         raw = Image.open(os.path.join(raw_dir, f"{e['id']}.png"))
         cols, rows = e["grid"]
         cells_by_action[e["action"]] = slice_grid(raw, cols, rows)[: e["frame_count"]]
-    all_cells = [c for cells in cells_by_action.values() for c in cells]
-    scale = compute_group_scale(all_cells, frame_size) if all_cells else None
-    frames_by_action = {
-        action: [trim_and_center(c, frame_size, scale=scale, align="bottom") for c in cells]
-        for action, cells in cells_by_action.items()
-    }
+    frames_by_action = {}
+    for action, cells in cells_by_action.items():
+        scale = compute_group_scale(cells, frame_size) if cells else None
+        frames_by_action[action] = [trim_and_center(c, frame_size, scale=scale, align="bottom") for c in cells]
     return frames_by_action, frame_size
 
 
