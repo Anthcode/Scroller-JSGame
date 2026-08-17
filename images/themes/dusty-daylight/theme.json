@@ -1,0 +1,61 @@
+{
+  "name": "dusty-daylight",
+  "layers": [
+    { "file": "bg_sky.png",        "xspeed": 0,    "role": "sky" },
+    { "file": "bg_far_canyon.png", "xspeed": 0.2 },
+    { "file": "bg_mid_mesas.png",  "xspeed": 0.46 },
+    { "file": "bg_near_scrub.png", "xspeed": 0.8 },
+    { "file": "bg_ground.png",     "xspeed": 1.0,  "role": "ground" }
+  ],
+  "player": {
+    "sheet": "player.png",
+    "frameWidth": 256,
+    "frameHeight": 256,
+    "states": {
+      "idle":       { "row": 0, "frameCount": 6, "frameInterval": 80, "startFrame": 0, "loop": true,  "locked": false, "next": null },
+      "move-left":  { "row": 1, "frameCount": 8, "frameInterval": 60, "startFrame": 0, "loop": true,  "locked": false, "next": null },
+      "move-right": { "row": 2, "frameCount": 8, "frameInterval": 60, "startFrame": 0, "loop": true,  "locked": false, "next": null },
+      "jump":       { "row": 3, "frameCount": 6, "frameInterval": 70, "startFrame": 0, "loop": true,  "locked": false, "next": null },
+      "hit":        { "row": 4, "frameCount": 4, "frameInterval": 60, "startFrame": 0, "loop": false, "locked": true,  "next": "idle" },
+      "death":      { "row": 5, "frameCount": 8, "frameInterval": 90, "startFrame": 0, "loop": false, "locked": true,  "next": null }
+    },
+    "initialState": "idle"
+  },
+  "enemies": {
+    "walker": {
+      "sheet": "enemy.png",
+      "frameWidth": 160,
+      "frameHeight": 160,
+      "states": {
+        "idle":  { "row": 0, "frameCount": 1, "frameInterval": 200, "startFrame": 0, "loop": true,  "locked": false, "next": null },
+        "move":  { "row": 1, "frameCount": 6, "frameInterval": 100, "startFrame": 0, "loop": true,  "locked": false, "next": null },
+        "hit":   { "row": 2, "frameCount": 4, "frameInterval": 70,  "startFrame": 0, "loop": false, "locked": true,  "next": "idle" },
+        "death": { "row": 3, "frameCount": 6, "frameInterval": 110, "startFrame": 0, "loop": false, "locked": true,  "next": null }
+      },
+      "initialState": "idle"
+    },
+    "ghost": {
+      "sheet": "ghost.png",
+      "frameWidth": 160,
+      "frameHeight": 160,
+      "states": {
+        "idle":  { "row": 0, "frameCount": 1, "frameInterval": 200, "startFrame": 0, "loop": true,  "locked": false, "next": null },
+        "move":  { "row": 1, "frameCount": 6, "frameInterval": 90,  "startFrame": 0, "loop": true,  "locked": false, "next": null },
+        "hit":   { "row": 2, "frameCount": 4, "frameInterval": 70,  "startFrame": 0, "loop": false, "locked": true,  "next": "idle" },
+        "death": { "row": 3, "frameCount": 4, "frameInterval": 110, "startFrame": 0, "loop": false, "locked": true,  "next": null }
+      },
+      "initialState": "idle"
+    }
+  },
+  "dayPhases": [
+    { "t": 0.000, "r": 30,  "g": 15,  "b": 50,  "a": 0.68 },
+    { "t": 0.125, "r": 60,  "g": 25,  "b": 60,  "a": 0.60 },
+    { "t": 0.250, "r": 235, "g": 120, "b": 50,  "a": 0.35 },
+    { "t": 0.375, "r": 255, "g": 210, "b": 130, "a": 0.10 },
+    { "t": 0.500, "r": 255, "g": 235, "b": 180, "a": 0.06 },
+    { "t": 0.625, "r": 255, "g": 170, "b": 80,  "a": 0.14 },
+    { "t": 0.750, "r": 230, "g": 90,  "b": 35,  "a": 0.40 },
+    { "t": 0.875, "r": 70,  "g": 30,  "b": 70,  "a": 0.58 },
+    { "t": 1.000, "r": 30,  "g": 15,  "b": 50,  "a": 0.68 }
+  ]
+}

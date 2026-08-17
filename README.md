@@ -71,6 +71,25 @@ Uruchomienie: `pip install Pillow && python3 tools/compose_player_sheet.py` (ana
 
 Alternatywne/zapasowe generatory (proceduralny pixel-art, AI-generowany ninja) też są w `tools/`, oznaczone jako fallback — nie uruchamiaj ich bez potrzeby, bo nadpiszą obecną grafikę.
 
+## Tematy graficzne
+
+Temat to komplet grafik (warstwy paralaksy, spritesheety gracza/wrogów, opcjonalnie paleta cyklu dnia/nocy) opisany manifestem `theme.json` — geometria gry (hitboxy, `GROUND_LINE_Y`, fizyka) jest od tematu niezależna i nigdy się nie zmienia przy podmianie. Wbudowany temat `classic` ładuje się od razu, bez zapytania sieciowego. Dostępne tematy:
+
+- `classic` — domyślna grafika gry.
+- `dusty-daylight` — pustynny kanion, cieplejsza/bardziej słoneczna paleta cyklu dnia i nocy (`images/themes/dusty-daylight/`).
+
+Wybór tematu:
+
+- URL: `?theme=dusty-daylight` (odczytywane raz przy starcie, np. `http://localhost:8000/game-demo.html?theme=dusty-daylight`).
+- Dropdown „Temat” w panelu ⚙️ (`#themeSelect` w `game-demo.html`) — podmienia grafikę w locie, bez restartu gry i bez zmiany fizyki; wrogowie już obecni na ekranie kończą swoją animację w starej grafice, nowe spawny biorą nową.
+
+Żeby dodać kolejny temat:
+
+1. Dodaj jego wpisy do `assets-manifest.json` (styl, paleta, siatki spritesheetów).
+2. Wygeneruj assety: `python tools/generate_theme_assets.py --only <id>` (patrz nagłówek skryptu po szczegóły; `generation-log.jsonl` trzyma prompt każdego wygenerowanego pliku, żeby dało się go odtworzyć).
+3. Napisz `images/themes/<nazwa>/theme.json` (warstwy, `frameWidth`/`frameHeight`/stany gracza i wrogów, opcjonalnie `dayPhases`) analogicznie do `images/themes/dusty-daylight/theme.json`.
+4. Dodaj `<option value="<nazwa>">` do `#themeSelect` w `game-demo.html`.
+
 ## Uruchomienie lokalnie
 
 To statyczna strona bez buildu - wystarczy dowolny serwer HTTP:
