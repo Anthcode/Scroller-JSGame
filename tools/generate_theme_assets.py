@@ -4,6 +4,8 @@
 Przebieg: assets-manifest.json -> prompt -> OpenAI Images API -> images/themes/_raw/
 -> post-processing (Pillow, bez LLM) -> images/themes/<temat>/ + generation-log.jsonl.
 
+Domyslny model --model to gpt-image-1.5 (gpt-image-2 nie obsługuje background=transparent, HTTP 400).
+
 Uruchamianie (z korzenia repo):
   python tools/generate_theme_assets.py --dry-run              # tylko wypisz prompty
   python tools/generate_theme_assets.py                        # generuj brakujace + zbuduj wyjscia
@@ -310,7 +312,7 @@ def main(argv=None):
     ap.add_argument("--manifest", default=DEFAULT_MANIFEST)
     ap.add_argument("--only", action="append", help="tylko wpis(y) o tym id")
     ap.add_argument("--force", action="store_true", help="regeneruj mimo istniejacego raw")
-    ap.add_argument("--model", default="gpt-image-2")
+    ap.add_argument("--model", default="gpt-image-1.5")
     ap.add_argument("--dry-run", action="store_true", help="wypisz prompty, bez API i plikow")
     ap.add_argument("--validate-only", action="store_true", help="tylko walidacja gotowych plikow")
     args = ap.parse_args(argv)
