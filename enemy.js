@@ -12,25 +12,13 @@
 //                dotknięcie od dołu/boku rani gracza tak samo jak wejście w naziemnego
 //                wroga, zabija go wyłącznie stomp w trakcie opadania (patrz game.js).
 //
-// images/enemy/enemy.png - złożony z oryginalnego assetu tej samej gry (wcześniejszy
-// deploy: https://parallax-fx.web.app/, patrz tools/original_game_assets/enemy.png).
-// Oryginał miał tylko 2-klatkowy chód, bez animacji trafienia/śmierci - hit i death są
-// syntetyzowane (tint, obrót+zanik). fly-enemy.png miał za to naturalną animację lotu
-// (falujący "ogon" mgły) - move ducha używa jej wprost, bez syntezy.
+// Grafika (sheet/klatki/stany) każdego typu przychodzi z aktywnego tematu (theme.js,
+// THEME_DEFAULTS.enemies dla classic - tam też historia źródeł assetów: enemy.png,
+// ghost.png i niekwadratowa siatka ducha). Poniżej zostają wyłącznie statystyki
+// rozgrywki - niezależne od tematu (spec §2.3).
 const ENEMY_TYPES = {
     walker: {
-        animData: {
-            sheets: ['images/enemy/enemy.png'],
-            frameWidth: 110,
-            frameHeight: 110,
-            states: {
-                idle:  { row: 0, frameCount: 1, frameInterval: 200, startFrame: 0, loop: true,  locked: false, next: null },
-                move:  { row: 1, frameCount: 2, frameInterval: 150, startFrame: 0, loop: true,  locked: false, next: null },
-                hit:   { row: 2, frameCount: 4, frameInterval: 70,  startFrame: 0, loop: false, locked: true,  next: 'idle' },
-                death: { row: 3, frameCount: 6, frameInterval: 120, startFrame: 0, loop: false, locked: true,  next: null }
-            },
-            initialState: 'idle'
-        },
+        animData: buildAnimData(currentTheme.enemies.walker),
         width: 76, height: 76,
         inset: { x: 4, top: 4, bottom: 4 },
         hp: 2,
@@ -42,18 +30,7 @@ const ENEMY_TYPES = {
         // Ta sama grafika/animacje co walker - wariant różni się statystykami, rozmiarem
         // (mniejszy = czytelnie "inny" na pierwszy rzut oka) i fioletowym tintem w draw(),
         // żeby nie wymagać nowego assetu dla samej różnorodności.
-        animData: {
-            sheets: ['images/enemy/enemy.png'],
-            frameWidth: 110,
-            frameHeight: 110,
-            states: {
-                idle:  { row: 0, frameCount: 1, frameInterval: 200, startFrame: 0, loop: true,  locked: false, next: null },
-                move:  { row: 1, frameCount: 2, frameInterval: 110, startFrame: 0, loop: true,  locked: false, next: null },
-                hit:   { row: 2, frameCount: 4, frameInterval: 70,  startFrame: 0, loop: false, locked: true,  next: 'idle' },
-                death: { row: 3, frameCount: 6, frameInterval: 120, startFrame: 0, loop: false, locked: true,  next: null }
-            },
-            initialState: 'idle'
-        },
+        animData: buildAnimData(currentTheme.enemies.walkerFast),
         width: 56, height: 56,
         inset: { x: 3, top: 3, bottom: 3 },
         hp: 1,
@@ -63,28 +40,7 @@ const ENEMY_TYPES = {
         placeholderColor: '#D2691E'
     },
     ghost: {
-        animData: {
-            sheets: ['images/enemy/ghost.png'],
-            // Arkusz ma realnie 2087x754px, wciąż logicznie 11 kolumn x 4 wiersze (jak
-            // poprzedni asset), ale komórka NIE jest kwadratowa 120x120 - to była siatka
-            // starego pliku (1320x480, PR #20). Zmierzone bezpośrednio (analiza pikseli):
-            // pitch kolumny 2087/11 ≈ 189.7px, pitch wiersza 754/4 = 188.5px dokładnie.
-            // Stary rozmiar 120x120 krojony na tym pliku "rozjeżdżał się" z każdą kolejną
-            // klatką (sx = frame*120 uciekał coraz głębiej w złą komórkę) - canvas
-            // drawImage akceptuje niecałkowite sWidth/sHeight bez problemu.
-            frameWidth: 2087 / 11,
-            frameHeight: 754 / 4,
-            states: {
-                idle:  { row: 0, frameCount: 1,  frameInterval: 200, startFrame: 0, loop: true,  locked: false, next: null },
-                move:  { row: 1, frameCount: 11, frameInterval: 90,  startFrame: 0, loop: true,  locked: false, next: null },
-                hit:   { row: 2, frameCount: 4,  frameInterval: 70,  startFrame: 0, loop: false, locked: true,  next: 'idle' },
-                // Wiersz 4 (śmierć) ma w assecie tylko 4 realne klatki (biała -> szara ->
-                // ciemnoszara -> czarna), nie 6 jak zakładała stara konfiguracja - klatki
-                // 4-5 były puste/niewidoczne.
-                death: { row: 3, frameCount: 4,  frameInterval: 110, startFrame: 0, loop: false, locked: true,  next: null }
-            },
-            initialState: 'idle'
-        },
+        animData: buildAnimData(currentTheme.enemies.ghost),
         width: 80, height: 104,
         // Hitbox nieco mniejszy niż cała wizualna sylwetka (marginesy przezroczystości).
         inset: { x: 20, top: 20, bottom: 34 },

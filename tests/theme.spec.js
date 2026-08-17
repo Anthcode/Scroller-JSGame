@@ -58,4 +58,21 @@ test.describe('ThemeManager: classic + walidacja', () => {
         expect(layers.groundSpeed).toBe(1.0);
         expect(layers.midSpeeds).toEqual([0.2, 0.3, 0.46, 0.6, 0.8]);
     });
+
+    test('animData gracza i wrogow pochodzi z aktywnego tematu', async ({ page }) => {
+        await gotoGame(page);
+        const src = await page.evaluate(() => ({
+            player: PLAYER_ANIM_DATA.sheets[0],
+            playerFrame: PLAYER_ANIM_DATA.frameWidth,
+            walker: ENEMY_TYPES.walker.animData.sheets[0],
+            ghostFrame: ENEMY_TYPES.ghost.animData.frameWidth,
+            // te same OBIEKTY stanow co w THEME_DEFAULTS - jedno zrodlo prawdy, bez kopii
+            sameStates: PLAYER_ANIM_DATA.states === THEME_DEFAULTS.player.states
+        }));
+        expect(src.player).toContain('character.png');
+        expect(src.playerFrame).toBe(150);
+        expect(src.walker).toContain('enemy.png');
+        expect(src.ghostFrame).toBeCloseTo(2087 / 11, 5);
+        expect(src.sameStates).toBe(true);
+    });
 });

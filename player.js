@@ -1,27 +1,8 @@
 // ==== GRACZ ====
-// images/player/character.png - złożony z oryginalnych assetów tej samej gry
-// (wcześniejszy deploy: https://parallax-fx.web.app/ - idlesheet.png,
-// runsheet.png, jump.png, die.png). Skrypt składający: tools/compose_player_sheet.py
-// (źródła w tools/player_source_assets/). Oryginał nie miał osobnej animacji
-// trafienia ani lustrzanego biegu w lewo - hit jest syntetyzowany (tint na
-// klatkach idle), a move-left to programowo odbite klatki runsheet.png.
-// 150x150px/klatkę, układ wierszy dokładnie taki jak w `states` poniżej.
-const PLAYER_ANIM_DATA = {
-    sheets: [
-        'images/player/character.png',
-    ],
-    frameWidth: 150,
-    frameHeight: 150,
-    states: {
-        idle:         { row: 0, frameCount: 10, frameInterval: 50, startFrame: 0, loop: true,  locked: false, next: null },
-        'move-left':  { row: 1, frameCount: 10, frameInterval: 50, startFrame: 0, loop: true,  locked: false, next: null },
-        'move-right': { row: 2, frameCount: 10, frameInterval: 50, startFrame: 0, loop: true,  locked: false, next: null },
-        jump:         { row: 3, frameCount: 10, frameInterval: 50, startFrame: 0, loop: true,  locked: false, next: null },
-        hit:          { row: 4, frameCount: 6,  frameInterval: 60, startFrame: 0, loop: false, locked: true,  next: 'idle' },
-        death:        { row: 5, frameCount: 10, frameInterval: 90, startFrame: 0, loop: false, locked: true,  next: null }
-    },
-    initialState: 'idle'
-};
+// Grafika (sheet/klatki/stany) przychodzi z aktywnego tematu (theme.js, THEME_DEFAULTS
+// dla classic - tam tez historia zrodel assetu). Ten plik trzyma wylacznie fizyke,
+// sterowanie i geometrie hitboxa - identyczne dla kazdego tematu (spec §2.3).
+const PLAYER_ANIM_DATA = buildAnimData(currentTheme.player);
 
 // WorldDirector (world.js): w deszczu sterowanie poziome przechodzi z twardego przypisania
 // na lerp ("ślizg"), a w skoku silny wiatr znosi gracza proporcjonalnie do windForce.
