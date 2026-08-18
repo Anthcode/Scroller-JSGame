@@ -9,8 +9,8 @@
   ],
   "player": {
     "sheet": "player.png",
-    "frameWidth": 256,
-    "frameHeight": 256,
+    "frameWidth": 320,
+    "frameHeight": 320,
     "states": {
       "idle":       { "row": 0, "frameCount": 6, "frameInterval": 80, "startFrame": 0, "loop": true,  "locked": false, "next": null },
       "move-left":  { "row": 1, "frameCount": 8, "frameInterval": 60, "startFrame": 0, "loop": true,  "locked": false, "next": null },

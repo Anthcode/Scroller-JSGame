@@ -228,7 +228,7 @@ def validate_sheet(sheet, frame_size, rows_spec):
             frame = sheet.crop((c * frame_size, r * frame_size,
                                 (c + 1) * frame_size, (r + 1) * frame_size))
             alpha = frame.getchannel("A")
-            opaque = sum(1 for a in alpha.getdata() if a > 16)
+            opaque = sum(1 for a in alpha.get_flattened_data() if a > 16)
             if opaque < frame_size * frame_size * 0.01:
                 raise ValueError(f"pusta klatka: wiersz '{action}', kolumna {c}")
 
@@ -238,7 +238,7 @@ def validate_ground(img, ground_top_px=116):
     GROUND_LINE_Y (core.js) zaklada powierzchnie na tej wysokosci."""
     w, h = img.size
     band = img.crop((0, h - ground_top_px, w, h)).getchannel("A")
-    data = band.getdata()
+    data = band.get_flattened_data()
     coverage = sum(1 for a in data if a > 200) / len(data)
     if coverage < 0.9:
         raise ValueError(f"pas gruntu ma krycie {coverage:.0%} < 90% - powierzchnia "

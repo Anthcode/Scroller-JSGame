@@ -20,7 +20,7 @@ test.describe('Temat dusty-daylight', () => {
         expect(state.layerCount).toBe(5);
         expect(state.layerSpeeds).toEqual([0, 0.2, 0.46, 0.8, 1.0]);
         expect(state.playerSheet).toContain('themes/dusty-daylight/player.png');
-        expect(state.playerFrame).toBe(256);
+        expect(state.playerFrame).toBe(320);
         expect(state.walkerFrame).toBe(160);
     });
 
